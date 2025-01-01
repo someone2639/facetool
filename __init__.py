@@ -43,6 +43,9 @@ from .DLParse import parseDL, addRootAnimator
 from bpy.types import Operator
 from bpy.types import Panel
 
+import sys
+sys.dont_write_bytecode = True
+
 class TLA_OT_operator(Operator):
     """ tooltip goes here """
     bl_idname = "demo.operator"

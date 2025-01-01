@@ -1,0 +1,123 @@
+import bpy
+import math
+import mathutils
+from .main import readStruct
+from itertools import zip_longest
+
+def rotposzip(*iterables):
+    for result in (grp for grp in zip_longest(*iterables, fillvalue=None)):
+        yield tuple(v for v in result)
+
+def editmode(o):
+    bpy.context.view_layer.objects.active = o
+    o.select_set(True)
+    if bpy.context.mode != "EDIT":
+        bpy.ops.object.mode_set(mode="EDIT")
+
+def posemode(o):
+    bpy.context.view_layer.objects.active = o
+    o.select_set(True)
+    if bpy.context.mode != "POSE":
+        bpy.ops.object.mode_set(mode="POSE")
+
+def objectmode():
+    if bpy.context.mode != "OBJECT":
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+class GDAnimType():
+    EMPTY                 = 0  # Listed types are how the data are arranged in memory; maybe not be exact type
+    MTX4x4                = 1  # f32[4][4]
+    SCALE3F_ROT3F_POS3F   = 2  # f32[3][3]
+    SCALE3S_POS3S_ROT3S   = 3  # s16[9]
+    SCALE3F_ROT3F_POS3F_2 = 4  # f32[3][3]
+    STUB                  = 5
+    ROT3S                 = 6  # s16[3]
+    POS3S                 = 7  # s16[3]
+    ROT3S_POS3S           = 8  # s16[6]
+    MTX4x4F_SCALE3F       = 9  # {f32 mtx[4][4]; f32 vec[3];}
+    CAMERA_EYE3S_LOOKAT3S = 11 # s16[6]
+
+class GDAnimation():
+    pass
+
+animLookup = {
+    GDAnimType.ROT3S: ">hhh",
+    GDAnimType.POS3S: ">hhh",
+    GDAnimType.ROT3S_POS3S: ">hhhhhh",
+}
+
+def makeAction(action):
+    action_name = f"FaceAction_{action}"
+    action = bpy.data.actions.get(action_name)
+    if not action:
+        action = bpy.data.actions.new(name=action_name)
+
+def LinkAnimation(boneID, action, rotation, position):
+    action_name = f"FaceAction_{action}"
+    action = bpy.data.actions.get(action_name)
+    armature = bpy.data.objects.get("Root_Animator_1001")
+    editmode(armature)
+    # Link the action to the armature's animation data
+    if not armature.animation_data:
+        armature.animation_data_create()
+    armature.animation_data.action = action
+    
+    # Step 2: Get Pose Bone (Pose mode is required for animation)
+    posemode(armature)
+    # get bone from joint name, parse and add keyframes to animation
+    bone = armature.pose.bones.get(f'Joint_{boneID}')
+    if not bone:
+        print(f"Bone Joint_{boneID} not found.")
+        objectmode()
+        return
+    
+    # Step 3: Apply Transformations (position or rotation)
+    for frame, (rot, pos) in enumerate(rotposzip(rotation, position)):
+        if rot:
+            xzy = [rot[0], rot[2], rot[1]]
+
+            rotation_rad = [math.radians(angle / 100.0) for angle in xzy]
+            bone.rotation_euler = rotation_rad
+            bone.keyframe_insert(data_path="rotation_euler", frame=frame, index=-1)
+        
+        if pos:
+            bone.location = pos
+            bone.keyframe_insert(data_path="location", frame=frame, index=-1)
+    objectmode()
+    if len(rotation) > 0:
+        print("Max rot value:", max([max(i) for i in rotation]))
+        print("Min rot value:", min([min(i) for i in rotation]))
+
+
+# Anim data format:
+#  s32 count (-1 if over, 0 if empty)
+#  u32 dataType (use the lookup struct)
+#  u32 address
+def parseAnimation(jointID, offset):
+    animdata = []
+    animdata.append(readStruct(">lLL", offset))
+    offset += 12
+    while (animdata[-1][0] != -1):
+        animdata.append(readStruct(">lLL", offset))
+        offset += 12
+    for i, a in enumerate(animdata):
+        makeAction(i)
+        (a_count, a_type, a_offset) = a
+        if a_count == -1:
+            break
+        animPos = []
+        animRot = []
+        for j in range(a_count):
+            structLookup = animLookup[a_type]
+            if a_type == GDAnimType.ROT3S:
+                animRot.append(readStruct(structLookup, a_offset))
+                a_offset += 6
+            elif a_type == GDAnimType.POS3S:
+                animPos.append(readStruct(structLookup, a_offset))
+                a_offset += 6
+            elif a_type == GDAnimType.ROT3S_POS3S:
+                vals = readStruct(structLookup, a_offset)
+                animRot.append(vals[0:3])
+                animPos.append(vals[3:6])
+                a_offset += 12
+        LinkAnimation(jointID, i, animRot, animPos)

@@ -2,6 +2,16 @@ import bpy
 import math
 import mathutils
 
+def editmode(o):
+    bpy.context.view_layer.objects.active = o
+    o.select_set(True)
+    if bpy.context.mode != "EDIT":
+        bpy.ops.object.mode_set(mode="EDIT")
+
+def objectmode():
+    if bpy.context.mode != "OBJECT":
+        bpy.ops.object.mode_set(mode='OBJECT')
+
 class Joint():
     def __init__(self, name):
         self.name = name
@@ -14,23 +24,22 @@ class Joint():
 
 def addBone(j):
     armature = bpy.data.objects.get('Root_Animator_1001')
-    bpy.context.view_layer.objects.active = armature
-    armature.select_set(True)
-    bpy.ops.object.mode_set(mode='EDIT')
+    editmode(armature)
     bpy.ops.armature.bone_primitive_add()
     new_bone = armature.data.edit_bones[-1]
     new_bone.name = j.name
     new_bone.use_deform = True
+    new_bone.head = (0, 0, 0)
+    new_bone.tail = (0, 0, 1)
 
-    bpy.ops.object.mode_set(mode='OBJECT')
+    objctmode()
     return new_bone
 
 def position_bone(bone, position, rotation):
     armature = bpy.data.objects.get('Root_Animator_1001')
-    bpy.context.view_layer.objects.active = armature
-    armature.select_set(True)
-    bpy.ops.object.mode_set(mode='EDIT')
-    bone.tail = tuple(position)
+    editmode(armature)
+    scale = (bone.tail - bone.head)[2]
+    bone.head = tuple(position)
     rotLen = math.sqrt(
         (rotation[0]**2) +
         (rotation[1]**2) +
@@ -42,23 +51,19 @@ def position_bone(bone, position, rotation):
     else:
         normRot = [r / rotLen for r in rotation]
     headPos = (
-        position[0] + (10 * normRot[0]),
-        position[1] + (10 * normRot[1]),
-        position[2] + (10 * normRot[2])
+        position[0] + (scale * normRot[0]),
+        position[1] + (scale * normRot[1]),
+        position[2] + (scale * normRot[2])
     )
-    bone.head = headPos
-    bpy.ops.object.mode_set(mode='OBJECT')
+    bone.tail = headPos
+    objectmode()
 
 def parent_bone(bone, to):
     armature = bpy.data.objects.get('Root_Animator_1001')
-    bpy.context.view_layer.objects.active = armature
-    armature.select_set(True)
-    bpy.ops.object.mode_set(mode='EDIT')
-    armature = bpy.data.objects.get('Root_Animator_1001')
+    editmode(armature)
     pbone = armature.data.edit_bones.get(f"Joint_{to}")
     if pbone:
         bone.parent = pbone
-    if bpy.context.mode != "OBJECT":
-        bpy.ops.object.mode_set(mode="OBJECT")
+    objectmode()
 
 
