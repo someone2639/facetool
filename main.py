@@ -2,7 +2,6 @@ import struct
 
 fb = []
 
-
 def readFile():
     global fb
     with open("/home/faris/Devel/goddard/gd.bin", "rb") as f:
@@ -18,6 +17,8 @@ class Command():
         self.arg1 = arg1
         self.arg2 = arg2
         self.vec = vec
+    def __str__(self):
+        return f"cmd {self.type}: ({self.arg1}, {self.arg2}) {self.vec}"
 
 def readCMD(offset):
     global fb
@@ -35,15 +36,5 @@ def readDL(offset):
     offset += 24
     while cmdList[-1].type != 58:
         cmdList.append(readCMD(offset))
-        print("    Reading cmd...",cmdList[-1])
         offset += 24
     return cmdList
-
-
-# readDL(0)
-
-# for cmd in cmdList:
-#     match cmd.type:
-#         case 0:
-
-

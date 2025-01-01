@@ -38,7 +38,7 @@ from bpy.utils import register_class, unregister_class
 from bpy.path import abspath
 
 from .main import readDL, readFile
-from .DLParse import parseDL
+from .DLParse import parseDL, addRootAnimator
 
 from bpy.types import Operator
 from bpy.types import Panel
@@ -46,7 +46,7 @@ from bpy.types import Panel
 class TLA_OT_operator(Operator):
     """ tooltip goes here """
     bl_idname = "demo.operator"
-    bl_label = "I'm a Skeleton Operator"
+    bl_label = "Import from gd.bin"
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
@@ -54,6 +54,7 @@ class TLA_OT_operator(Operator):
         return context.mode == "OBJECT"
 
     def execute(self, context):
+        addRootAnimator()
         readFile()
         cmdList = readDL(0)
         parseDL(cmdList)
