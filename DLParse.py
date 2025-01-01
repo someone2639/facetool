@@ -35,8 +35,8 @@ def addRootAnimator():
     armature = em
     editmode(armature)
     bone0 = armature.data.edit_bones[-1]
-    bone0.head = (0, 0, 10)
-    bone0.tail = (0, 0, 0)
+    bone0.head = (0, 0, 0)
+    bone0.tail = (0, 0, 10)
     objectmode()
 
 def addBone(name):
@@ -193,14 +193,12 @@ def parseDL(cmdList):
                 objMap[curObjName] = em
                 objMap[curObjName].parent = objMap[subGroupName];
                 vtxGroups[curObjName] = objMap[curSkinShape].vertex_groups.new( name = f"VtxGroup{curObjName}" )
-                # editmode(objMap[curSkinShape])
+                editmode(objMap[curSkinShape])
                 mesh = bpy.data.meshes[f"Shape_{curSkinShape}_mesh"]
-                vtxGroups[curObjName].add(
-                    [i for i in range(len(mesh.vertices))],
-                    0.0,
-                    'ADD'
-                )
-                # objectmode()
+                for v in mesh.vertices:
+                    for g in v.groups:
+                        g.weight = 0.0
+                objectmode()
             case DLCmd.SetShapePtr:
                 if cmd.arg1 in shapeMap:
                     constructShape(cmd.arg1, shapeMap[cmd.arg1])
