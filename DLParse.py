@@ -194,22 +194,28 @@ def parseDL(cmdList):
                 curBone = addBone(f'Joint_{curObjName}')
                 objMap[curObjName] = em
                 objMap[curObjName].parent = objMap[subGroupName];
-                vtxGroups[curObjName] = objMap[curSkinShape].vertex_groups.new( name = f"Joint_{curObjName}" )
+            case DLCmd.SetShapePtr:
+                if cmd.arg1 in shapeMap:
+                    constructShape(cmd.arg1, shapeMap[cmd.arg1])
+            case DLCmd.SetSkinShape:
+                curSkinShape = cmd.arg1
+                o = bpy.data.objects[f"Shape_{curSkinShape}"]
+                mod = o.modifiers.new(f"Armature_{curSkinShape}", "ARMATURE")
+                mod.object = bpy.data.objects['Root_Animator_1001']
+                vtxGroups[curSkinShape] = objMap[curSkinShape].vertex_groups.new( name = f"Joint_{curObjName}" )
                 editmode(objMap[curSkinShape])
                 mesh = bpy.data.meshes[f"Shape_{curSkinShape}_mesh"]
                 for v in mesh.vertices:
                     for g in v.groups:
                         g.weight = 0.0
                 objectmode()
-            case DLCmd.SetShapePtr:
-                if cmd.arg1 in shapeMap:
-                    constructShape(cmd.arg1, shapeMap[cmd.arg1])
-            case DLCmd.SetSkinShape:
-                curSkinShape = cmd.arg1
+                mod.vertex_group = f"Joint_{curObjName}"
+
+                # .modifiers["Armature"].object
                 #  and attach the shape to a joint
             case DLCmd.SetSkinWeight:
                 # Add this weight to the vertex group
-                group = vtxGroups[curObjName]
+                group = vtxGroups[curSkinShape]
                 group.add( [cmd.arg2], cmd.vec[0] / 100.0, 'ADD' )
             case DLCmd.StartGroup:
                 if cmd.arg1 != 1000 and cmd.arg1 != 1:
