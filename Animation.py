@@ -62,7 +62,7 @@ def LinkAnimation(boneID, action, rotation, position):
         armature.animation_data_create()
     armature.animation_data.action = action
     objectmode()
-    
+
     # Step 2: Get Pose Bone (Pose mode is required for animation)
     posemode(armature)
     # get bone from joint name, parse and add keyframes to animation
@@ -73,6 +73,10 @@ def LinkAnimation(boneID, action, rotation, position):
         return
     
     # Step 3: Apply Transformations (position or rotation)
+    if len(rotation) > 0:
+        posemode(armature)
+        bpy.data.objects["Root_Animator_1001"].pose.bones[f'Joint_{boneID}'].rotation_mode = "XYZ"
+        objectmode()
     for frame, (rot, pos) in enumerate(rotposzip(rotation, position)):
         if rot:
             xzy = [rot[0], rot[2], rot[1]]
@@ -84,6 +88,9 @@ def LinkAnimation(boneID, action, rotation, position):
         if pos:
             bone.location = pos
             bone.keyframe_insert(data_path="location", frame=frame, index=-1)
+        # else:
+            # do not change pos but put in a keyframe
+            # bone.keyframe_insert(data_path="location", frame=frame, index=-1)
     objectmode()
     # if len(rotation) > 0:
     #     print("Max rot value:", max([max(i) for i in rotation]))
@@ -102,10 +109,10 @@ def parseAnimation(jointID, offset):
         animdata.append(readStruct(">lLL", offset))
         offset += 12
     for i, a in enumerate(animdata):
-        makeAction(i)
         (a_count, a_type, a_offset) = a
         if a_count == -1:
             break
+        makeAction(i)
         animPos = []
         animRot = []
         for j in range(a_count):

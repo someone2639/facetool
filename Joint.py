@@ -21,6 +21,8 @@ class Joint():
         self.scale = [1, 1, 1]
         self.parent = 0 # 0 means root
         self.weights = {}
+        self.bone = None
+        self.vtxGroup = None
 
 def addBone(j):
     armature = bpy.data.objects.get('Root_Animator_1001')
