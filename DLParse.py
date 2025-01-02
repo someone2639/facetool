@@ -22,6 +22,12 @@ def editmode(o):
     if bpy.context.mode != "EDIT":
         bpy.ops.object.mode_set(mode="EDIT")
 
+def posemode(o):
+    bpy.context.view_layer.objects.active = o
+    o.select_set(True)
+    if bpy.context.mode != "POSE":
+        bpy.ops.object.mode_set(mode="POSE")
+
 def objectmode():
     if bpy.context.mode != "OBJECT":
         bpy.ops.object.mode_set(mode='OBJECT')
@@ -40,7 +46,7 @@ def addRootAnimator():
     bone0.tail = (0, 0, 10)
     objectmode()
 
-def addBone(name):
+def addBone(name, orient):
     armature = bpy.data.objects.get('Root_Animator_1001')
     editmode(armature)
     bpy.ops.armature.bone_primitive_add()
@@ -48,6 +54,10 @@ def addBone(name):
     new_bone.name = name
     new_bone.use_deform = True
     objectmode()
+    if orient:
+        posemode(armature)
+        bpy.data.objects["Root_Animator_1001"].pose.bones[name].rotation_mode = "XYZ"
+        objectmode()
 
 def parent_bone(name, to):
     armature = bpy.data.objects.get('Root_Animator_1001')
@@ -65,22 +75,23 @@ def position_bone(boneName, position, rotation):
     editmode(armature)
     bone = armature.data.edit_bones.get(f"Joint_{boneName}")
     bone.head = tuple(position)
-    rotLen = math.sqrt(
-        (rotation[0]**2) +
-        (rotation[1]**2) +
-        (rotation[2]**2)
-    )
-    normRot = []
-    if (rotLen == 0):
-        normRot = [0, 0, 1]
-    else:
-        normRot = [r / rotLen for r in rotation]
-    headPos = (
-        position[0] + (100 * normRot[0]),
-        position[1] + (100 * normRot[1]),
-        position[2] + (100 * normRot[2])
-    )
-    bone.tail = headPos
+    # rotLen = math.sqrt(
+    #     (rotation[0]**2) +
+    #     (rotation[1]**2) +
+    #     (rotation[2]**2)
+    # )
+    # normRot = []
+    # if (rotLen == 0):
+    #     normRot = [0, 0, 1]
+    # else:
+    #     normRot = [r / rotLen for r in rotation]
+    # headPos = (
+    #     position[0] + (100 * normRot[0]),
+    #     position[1] + (100 * normRot[1]),
+    #     position[2] + (100 * normRot[2])
+    # )
+    position[2] += 100
+    bone.tail = tuple(position)
     objectmode()
 
 def parseDL(cmdList):
@@ -115,7 +126,7 @@ def parseDL(cmdList):
                     case DNode.D_DATA_GRP:
                         dataGrpMap[curObjName] = []
                     case DNode.D_NET:
-                        addBone(f"Joint_{curObjName}")
+                        addBone(f"Joint_{curObjName}", False)
                         jointMap[curObjName] = Joint(curObjName)
                         if rootNet == 0:
                             rootNet = curObjName
@@ -177,50 +188,35 @@ def parseDL(cmdList):
                     else:
                         print(f"Attaching {curObjName} to {cmd.arg1}...")
                         parent_bone(curObjName, cmd.arg1)
-                # if curObjName in jointMap and curObjType == DNode.D_NET:
-                #     objMap[curObjName].location = jointMap[curObjName].location
-                #     objMap[curObjName].rotation_euler = [
-                #         math.radians(d) for d in jointMap[curObjName].rotation
-                #     ]
-                # if curObjType == DNode.D_JOINT:
-                #     if curBone:
-                #         parent_bone(curBone, cmd.arg1)
-                # else:
-                #     if curObjType == DNode.D_ANIMATOR:
-                #         pass
-                #     if subGroupName != 0:
-                #         objMap[subGroupName].parent = objMap[cmd.arg1]
-                #     else:
-                #         objMap[curObjName].parent = objMap[cmd.arg1]
             case DLCmd.LinkWith:
                 boneID = cmd.arg1
                 if boneID == 221:
                     boneID = 1001
                 parseAnimation(boneID, animMap[curObjName])
+                objectmode()
             case DLCmd.MakeNetWithSubGroup:
                 subGroupName = cmd.arg1
-                addBone(f'Joint_{subGroupName}')
-                # bpy.ops.object.empty_add()
-                # em = bpy.context.object
-                # em.name = f'Net_{subGroupName}'
-                # objMap[subGroupName] = em
+                addBone(f'Joint_{subGroupName}', True)
             case DLCmd.EndNetWithSubGroup:
-                # TODO: commit weights
                 subGroupName = 0
                 curSkinShape = 0
             case DLCmd.MakeAttachedJoint:
-                # TDO: make bone
-                # TODO: make vertex group and add it to SkinShape
                 curObjType = DNode.D_JOINT
                 curObjName = cmd.arg1
                 jointMap[curObjName] = Joint(cmd.arg1)
-                # bpy.ops.object.empty_add()
-                # em = bpy.context.object
-                # em.name = f'JointEmpty_{curObjName}'
-                addBone(f'Joint_{curObjName}')
+                # override the vtx group
+                # print(f"MakeAttachedJoint vtxgroup Joint_{curObjName}")
+                vtxGroups[curSkinShape] = objMap[curSkinShape].vertex_groups.new(
+                    name = f"Joint_{curObjName}"
+                )
+                mesh = bpy.data.meshes[f"Shape_{curSkinShape}_mesh"]
+                editmode(objMap[curSkinShape])
+                for v in mesh.vertices:
+                    for g in v.groups:
+                        g.weight = 0.0
+                objectmode()
+                addBone(f'Joint_{curObjName}', False)
                 parent_bone(curObjName, subGroupName)
-                # objMap[curObjName] = em
-                # objMap[curObjName].parent = objMap[subGroupName];
             case DLCmd.SetShapePtr:
                 if cmd.arg1 in shapeMap:
                     constructShape(cmd.arg1, shapeMap[cmd.arg1])
@@ -228,26 +224,26 @@ def parseDL(cmdList):
                 curSkinShape = cmd.arg1
                 o = bpy.data.objects[f"Shape_{curSkinShape}"]
 
-                # if len([m for m in o.modifiers if m.name == "Armature_Root"]) == 0:
-                #     objMap[curSkinShape].vertex_groups.new(name = f"Joint_1001")
-                #     mod = o.modifiers.new(f"Armature_Root", "ARMATURE")
-                #     mod.object = bpy.data.objects['Root_Animator_1001']
-                #     mod.vertex_group = f"Joint_{curObjName}"
-
                 mod = o.modifiers.new(f"Armature_{curSkinShape}", "ARMATURE")
                 mod.object = bpy.data.objects['Root_Animator_1001']
-                vtxGroups[curSkinShape] = objMap[curSkinShape].vertex_groups.new( name = f"Joint_{curObjName}" )
+
+                link2Root = len(objMap[curSkinShape].vertex_groups) == 0
+                # print(f"SetSkinShape    vtxgroup Joint_{curObjName}")
+                vtxGroups[curSkinShape] = objMap[curSkinShape].vertex_groups.new( name = f"Joint_{subGroupName}" )
                 editmode(objMap[curSkinShape])
                 mesh = bpy.data.meshes[f"Shape_{curSkinShape}_mesh"]
                 for v in mesh.vertices:
                     for g in v.groups:
                         g.weight = 0.0
                 mod.vertex_group = f"Joint_{curObjName}"
-
-
                 objectmode()
-                # .modifiers["Armature"].object
-                #  and attach the shape to a joint
+                # if link2Root:
+                #     rootgroup = objMap[curSkinShape].vertex_groups.new( name = f"Joint_1001" )
+                #     all_indices = [v.index for v in mesh.vertices]
+                #     rootgroup.add(all_indices, 1.0, 'REPLACE')
+                #     mod = o.modifiers.new("Armature_Root", "ARMATURE")
+                #     mod.object = bpy.data.objects['Root_Animator_1001']
+                #     mod.vertex_group = "Joint_1001"
             case DLCmd.SetSkinWeight:
                 # Add this weight to the vertex group
                 group = vtxGroups[curSkinShape]

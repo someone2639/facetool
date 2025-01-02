@@ -61,6 +61,7 @@ def LinkAnimation(boneID, action, rotation, position):
     if not armature.animation_data:
         armature.animation_data_create()
     armature.animation_data.action = action
+    objectmode()
     
     # Step 2: Get Pose Bone (Pose mode is required for animation)
     posemode(armature)
@@ -76,7 +77,7 @@ def LinkAnimation(boneID, action, rotation, position):
         if rot:
             xzy = [rot[0], rot[2], rot[1]]
 
-            rotation_rad = [math.radians(angle / 100.0) for angle in xzy]
+            rotation_rad = [math.radians(angle / 10.0) for angle in xzy]
             bone.rotation_euler = rotation_rad
             bone.keyframe_insert(data_path="rotation_euler", frame=frame, index=-1)
         

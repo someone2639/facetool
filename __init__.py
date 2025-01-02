@@ -61,6 +61,7 @@ class TLA_OT_operator(Operator):
         readFile()
         cmdList = readDL(0)
         parseDL(cmdList)
+        bpy.context.scene.frame_end = 820
         return {"FINISHED"}
 
 
