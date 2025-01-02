@@ -84,9 +84,9 @@ def LinkAnimation(boneID, action, rotation, position):
             bone.location = pos
             bone.keyframe_insert(data_path="location", frame=frame, index=-1)
     objectmode()
-    if len(rotation) > 0:
-        print("Max rot value:", max([max(i) for i in rotation]))
-        print("Min rot value:", min([min(i) for i in rotation]))
+    # if len(rotation) > 0:
+    #     print("Max rot value:", max([max(i) for i in rotation]))
+    #     print("Min rot value:", min([min(i) for i in rotation]))
 
 
 # Anim data format:

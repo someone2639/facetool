@@ -40,23 +40,30 @@ def addRootAnimator():
     bone0.tail = (0, 0, 10)
     objectmode()
 
-def addBone(name, parent):
+def addBone(name):
     armature = bpy.data.objects.get('Root_Animator_1001')
     editmode(armature)
     bpy.ops.armature.bone_primitive_add()
     new_bone = armature.data.edit_bones[-1]
     new_bone.name = name
     new_bone.use_deform = True
-
-    pbone = armature.data.edit_bones.get(f"Joint_{parent}")
-    if pbone:
-        new_bone.parent = pbone
     objectmode()
 
-def position_bone(bone, position, rotation):
-    print("position_bone",bone,position,rotation)
+def parent_bone(name, to):
     armature = bpy.data.objects.get('Root_Animator_1001')
     editmode(armature)
+    bone = armature.data.edit_bones.get(f"Joint_{name}")
+    pbone = armature.data.edit_bones.get(f"Joint_{to}")
+    if pbone:
+        bone.parent = pbone
+    objectmode()
+
+
+def position_bone(boneName, position, rotation):
+    # print("position_bone",boneName,position,rotation)
+    armature = bpy.data.objects.get('Root_Animator_1001')
+    editmode(armature)
+    bone = armature.data.edit_bones.get(f"Joint_{boneName}")
     bone.head = tuple(position)
     rotLen = math.sqrt(
         (rotation[0]**2) +
@@ -94,6 +101,8 @@ def parseDL(cmdList):
     jointMap = {}
     animMap = {}
 
+    rootNet = 0
+
     for cmd in cmdList:
         match cmd.type:
             case DLCmd.CallList:
@@ -106,11 +115,16 @@ def parseDL(cmdList):
                     case DNode.D_DATA_GRP:
                         dataGrpMap[curObjName] = []
                     case DNode.D_NET:
-                        bpy.ops.object.empty_add()
-                        em = bpy.context.object
-                        em.name = f'Net_{curObjName}'
-                        objMap[curObjName] = em
-                        bpy.context.scene.collection.objects.link(em)
+                        addBone(f"Joint_{curObjName}")
+                        jointMap[curObjName] = Joint(curObjName)
+                        if rootNet == 0:
+                            rootNet = curObjName
+                            parent_bone(curObjName, 1001)
+                        # bpy.ops.object.empty_add()
+                        # em = bpy.context.object
+                        # em.name = f'Net_{curObjName}'
+                        # objMap[curObjName] = em
+                        # bpy.context.scene.collection.objects.link(em)
                     case DNode.D_SHAPE:
                         shapeMap[curObjName] = Shape(curObjName, 0,0,0)
                         mesh = bpy.data.meshes.new(f'Shape_{curObjName}_mesh')
@@ -120,6 +134,8 @@ def parseDL(cmdList):
                         bpy.context.view_layer.objects.active = obj
                         objMap[curObjName] = obj
                     case DNode.D_ANIMATOR:
+                        # addBone(f"Joint_{curObjName}")
+                        # jointMap[curObjName] = Joint(curObjName)
                         pass
                         # bpy.ops.object.empty_add()
                         # em = bpy.context.object
@@ -148,19 +164,19 @@ def parseDL(cmdList):
                 pass
             case DLCmd.SetRotation:
                 xzy = [cmd.vec[0], cmd.vec[2], cmd.vec[1]]
-                if curObjType == DNode.D_JOINT:
-                    jointMap[curObjName].rotation = xzy
-                else:
-                    objMap[curObjName].rotation_euler = [math.radians(r) for r in xzy]
+                # if curObjType == DNode.D_JOINT:
+                jointMap[curObjName].rotation = xzy
             case DLCmd.SetAttachOffset:
-                if curObjType == DNode.D_JOINT:
-                    jointMap[curObjName].position = cmd.vec
-                    if curBone:
-                        position_bone(curBone, cmd.vec, jointMap[curObjName].rotation)
-                else:
-                    objMap[curObjName].location = cmd.vec
+                jointMap[curObjName].position = cmd.vec
+                position_bone(curObjName, cmd.vec, jointMap[curObjName].rotation)
             case DLCmd.AttachTo:
-                pass
+                if curObjType != DNode.D_ANIMATOR:
+                    if subGroupName != 0:
+                        print(f"Attaching {subGroupName} to {cmd.arg1} (subgroup)...")
+                        parent_bone(subGroupName, cmd.arg1)
+                    else:
+                        print(f"Attaching {curObjName} to {cmd.arg1}...")
+                        parent_bone(curObjName, cmd.arg1)
                 # if curObjName in jointMap and curObjType == DNode.D_NET:
                 #     objMap[curObjName].location = jointMap[curObjName].location
                 #     objMap[curObjName].rotation_euler = [
@@ -183,10 +199,11 @@ def parseDL(cmdList):
                 parseAnimation(boneID, animMap[curObjName])
             case DLCmd.MakeNetWithSubGroup:
                 subGroupName = cmd.arg1
-                bpy.ops.object.empty_add()
-                em = bpy.context.object
-                em.name = f'Net_{subGroupName}'
-                objMap[subGroupName] = em
+                addBone(f'Joint_{subGroupName}')
+                # bpy.ops.object.empty_add()
+                # em = bpy.context.object
+                # em.name = f'Net_{subGroupName}'
+                # objMap[subGroupName] = em
             case DLCmd.EndNetWithSubGroup:
                 # TODO: commit weights
                 subGroupName = 0
@@ -200,7 +217,8 @@ def parseDL(cmdList):
                 # bpy.ops.object.empty_add()
                 # em = bpy.context.object
                 # em.name = f'JointEmpty_{curObjName}'
-                addBone(f'Joint_{curObjName}', 1001)
+                addBone(f'Joint_{curObjName}')
+                parent_bone(curObjName, subGroupName)
                 # objMap[curObjName] = em
                 # objMap[curObjName].parent = objMap[subGroupName];
             case DLCmd.SetShapePtr:
