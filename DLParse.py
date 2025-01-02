@@ -95,7 +95,7 @@ def position_bone(boneName, position, rotation):
     #     position[1] + (100 * normRot[1]),
     #     position[2] + (100 * normRot[2])
     # )
-    position[2] += 10
+    position[2] += 100
     bone.tail = tuple(position)
     objectmode()
 
@@ -172,7 +172,6 @@ def parseDL(cmdList):
                 pass
             case DLCmd.SetRotation:
                 xzy = [cmd.vec[0], cmd.vec[2], cmd.vec[1]]
-                # if curObjType == DNode.D_JOINT:
                 jointMap[curObjName].rotation = xzy
             case DLCmd.SetAttachOffset:
                 jointMap[curObjName].position = cmd.vec
