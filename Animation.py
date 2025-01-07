@@ -3,26 +3,12 @@ import math
 import mathutils
 from .main import readStruct
 from itertools import zip_longest
+from mathutils import Euler
+from .utils import editmode, posemode, objectmode, to_xzy
 
 def rotposzip(*iterables):
     for result in (grp for grp in zip_longest(*iterables, fillvalue=None)):
         yield tuple(v for v in result)
-
-def editmode(o):
-    bpy.context.view_layer.objects.active = o
-    o.select_set(True)
-    if bpy.context.mode != "EDIT":
-        bpy.ops.object.mode_set(mode="EDIT")
-
-def posemode(o):
-    bpy.context.view_layer.objects.active = o
-    o.select_set(True)
-    if bpy.context.mode != "POSE":
-        bpy.ops.object.mode_set(mode="POSE")
-
-def objectmode():
-    if bpy.context.mode != "OBJECT":
-        bpy.ops.object.mode_set(mode='OBJECT')
 
 class GDAnimType():
     EMPTY                 = 0  # Listed types are how the data are arranged in memory; maybe not be exact type
@@ -52,6 +38,10 @@ def makeAction(action):
     if not action:
         action = bpy.data.actions.new(name=action_name)
 
+def set_local_rotation(obj, value):
+    rot = Euler(value, 'XYZ')
+    obj.rotation_euler = (obj.rotation_euler.to_matrix() @ rot.to_matrix()).to_euler(obj.rotation_mode)
+
 def LinkAnimation(boneID, action, rotation, position):
     action_name = f"FaceAction_{action}"
     action = bpy.data.actions.get(action_name)
@@ -79,9 +69,9 @@ def LinkAnimation(boneID, action, rotation, position):
         objectmode()
     for frame, (rot, pos) in enumerate(rotposzip(rotation, position)):
         if rot:
-            xzy = [rot[0], rot[2], rot[1]]
-
-            rotation_rad = [math.radians(angle / 10.0) for angle in xzy]
+            rotation_rad = Euler([math.radians(angle / 10.0) for angle in to_xzy(rot)], 'XZY')
+            # rotation_rad[2] += math.pi/2.0
+            # bpy.data.scenes["Scene"].tool_settings.transform_pivot_point
             bone.rotation_euler = rotation_rad
             bone.keyframe_insert(data_path="rotation_euler", frame=frame, index=-1)
         

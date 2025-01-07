@@ -10,28 +10,13 @@ import math
 import mathutils
 
 from .GMaterial import GMaterial
+from .utils import editmode, posemode, objectmode, to_xzy
 
 dataGrpMap = {}
 shapeMap = {}
 vtxGroups = {}
 objMap = {}
 jointMap = {}
-
-def editmode(o):
-    bpy.context.view_layer.objects.active = o
-    o.select_set(True)
-    if bpy.context.mode != "EDIT":
-        bpy.ops.object.mode_set(mode="EDIT")
-
-def posemode(o):
-    bpy.context.view_layer.objects.active = o
-    o.select_set(True)
-    if bpy.context.mode != "POSE":
-        bpy.ops.object.mode_set(mode="POSE")
-
-def objectmode():
-    if bpy.context.mode != "OBJECT":
-        bpy.ops.object.mode_set(mode='OBJECT')
 
 def addRootAnimator():
     global objMap
@@ -171,8 +156,7 @@ def parseDL(cmdList):
                 # dont have to impl on the importer since always [1,1,1]
                 pass
             case DLCmd.SetRotation:
-                xzy = [cmd.vec[0], cmd.vec[2], cmd.vec[1]]
-                jointMap[curObjName].rotation = xzy
+                jointMap[curObjName].rotation = to_xzy(cmd.vec)
             case DLCmd.SetAttachOffset:
                 jointMap[curObjName].position = cmd.vec
                 position_bone(curObjName, cmd.vec, jointMap[curObjName].rotation)
