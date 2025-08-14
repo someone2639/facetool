@@ -62,6 +62,10 @@ class TLA_OT_operator(Operator):
         cmdList = readDL(0)
         parseDL(cmdList)
         bpy.context.scene.frame_end = 820
+        for armature in bpy.data.objects:
+            if armature.type == 'ARMATURE':
+                for joint in armature.pose.bones:
+                    joint.rotation_mode = 'XYZ'
         return {"FINISHED"}
 
 

@@ -12,6 +12,7 @@ class Joint():
         self.rotation = [0, 0, 0]
         self.scale = [1, 1, 1]
         self.parent = 0 # 0 means root
+        self.child = 0 # 0 maens leaf
         self.weights = {}
         self.bone = None
         self.vtxGroup = None

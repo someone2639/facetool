@@ -7,10 +7,10 @@ from .Animation import parseAnimation
 from .Net import Net
 import bpy
 import math
-import mathutils
+from mathutils import Euler, Vector, Matrix
 
 from .GMaterial import GMaterial
-from .utils import editmode, posemode, objectmode, to_xzy
+from .utils import editmode, posemode, objectmode, to_xzy, vec_deg2rad
 
 dataGrpMap = {}
 shapeMap = {}
@@ -80,8 +80,7 @@ def position_bone(boneName, position, rotation):
     #     position[1] + (100 * normRot[1]),
     #     position[2] + (100 * normRot[2])
     # )
-    position[2] += 100
-    bone.tail = tuple(position)
+    bone.tail = tuple([position[0], position[1], position[2] + 100])
     objectmode()
 
 def parseDL(cmdList):
@@ -104,6 +103,7 @@ def parseDL(cmdList):
     netMap = {}
 
     rootNet = 0
+    iAM_MODIFYING_THE_SUBGROUP=False
 
     for cmd in cmdList:
         match cmd.type:
@@ -123,6 +123,7 @@ def parseDL(cmdList):
                         if rootNet == 0:
                             rootNet = curObjName
                             parent_bone(curObjName, 1001)
+                            jointMap[curObjName].parent = 0
                     case DNode.D_SHAPE:
                         shapeMap[curObjName] = Shape(curObjName, 0,0,0)
                         mesh = bpy.data.meshes.new(f'Shape_{curObjName}_mesh')
@@ -156,18 +157,38 @@ def parseDL(cmdList):
                 # dont have to impl on the importer since always [1,1,1]
                 pass
             case DLCmd.SetRotation:
-                jointMap[curObjName].rotation = to_xzy(cmd.vec)
+                if jointMap[curObjName].rotation == [0, 0, 0]:
+                    jointMap[curObjName].rotation = to_xzy(cmd.vec)
             case DLCmd.SetAttachOffset:
-                jointMap[curObjName].position = cmd.vec
-                position_bone(curObjName, cmd.vec, jointMap[curObjName].rotation)
+                if subGroupName != 0:
+                    if cmd.vec == [0, 0, 0]:
+                        jointMap[curObjName].position = jointMap[subGroupName].position
+                        position_bone(curObjName, jointMap[curObjName].position, [0, 0, 0])
+                    else:
+                        subgrot = Matrix.LocRotScale(
+                            jointMap[subGroupName].position,
+                            Euler(vec_deg2rad(jointMap[subGroupName].rotation), "XYZ"),
+                            None
+                        )
+
+                        finalmtx = Matrix.Translation(cmd.vec) @ subgrot
+                        jointMap[curObjName].position = finalmtx.to_translation()
+                        print(f"Using matrix math to set Joint_{curObjName} to {jointMap[curObjName].position}")
+                        print(f"btw the matrix was {finalmtx}")
+                        position_bone(curObjName, jointMap[curObjName].position, [0, 0, 0])
+                else:
+                    jointMap[curObjName].position = cmd.vec
+                    position_bone(curObjName, cmd.vec, jointMap[curObjName].rotation)
             case DLCmd.AttachTo:
                 if curObjType != DNode.D_ANIMATOR:
                     if subGroupName != 0:
-                        print(f"Attaching {subGroupName} to {cmd.arg1} (subgroup)...")
+                        print(f"Attaching subgroup {subGroupName} to {cmd.arg1}...")
                         parent_bone(subGroupName, cmd.arg1)
+                        jointMap[subGroupName].parent = cmd.arg1
                     else:
                         print(f"Attaching {curObjName} to {cmd.arg1}...")
                         parent_bone(curObjName, cmd.arg1)
+                        jointMap[curObjName].parent = cmd.arg1
                 if curObjType == DNode.D_NET:
                     if netMap[curObjName].type == 3:
                         obj = bpy.data.objects[netMap[curObjName].shape]
@@ -189,13 +210,16 @@ def parseDL(cmdList):
                 parseAnimation(boneID, animMap[curObjName])
                 objectmode()
             case DLCmd.MakeNetWithSubGroup:
+                iAM_MODIFYING_THE_SUBGROUP = True
                 subGroupName = cmd.arg1
+                print(f"MakeNetWithSubGroup {cmd.arg1}")
                 jointMap[subGroupName] = Joint(subGroupName)
                 jointMap[subGroupName].bone = addBone(f'Joint_{subGroupName}', True)
             case DLCmd.EndNetWithSubGroup:
                 subGroupName = 0
                 curSkinShape = 0
             case DLCmd.MakeAttachedJoint:
+                iAM_MODIFYING_THE_SUBGROUP = False
                 curObjType = DNode.D_JOINT
                 curObjName = cmd.arg1
                 jointMap[curObjName] = Joint(cmd.arg1)
@@ -244,7 +268,7 @@ def parseDL(cmdList):
             case DLCmd.SetSkinWeight:
                 # Add this weight to the vertex group
                 group = vtxGroups[curSkinShape]
-                group.add( [cmd.arg2], cmd.vec[0] / 100.0, 'ADD' )
+                group.add( [cmd.arg2], cmd.vec[0] / 100.0, 'REPLACE' )
             case DLCmd.StartGroup:
                 if cmd.arg1 != 1000 and cmd.arg1 != 1:
                     curMatGroup = cmd.arg1

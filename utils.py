@@ -1,4 +1,5 @@
 import bpy
+import math
 
 def editmode(o):
     bpy.context.view_layer.objects.active = o
@@ -18,3 +19,6 @@ def objectmode():
 
 def to_xzy(xyz):
     return [xyz[0], xyz[2], xyz[1]]
+
+def vec_deg2rad(rot):
+    return [math.radians(angle) for angle in to_xzy(rot)]

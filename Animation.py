@@ -47,6 +47,17 @@ def LinkAnimation(boneID, action, rotation, position):
     action = bpy.data.actions.get(action_name)
     armature = bpy.data.objects.get("Root_Animator_1001")
     editmode(armature)
+    # bonepos = (0, 0, 0)
+    # boneToGetLocationFrom = armature.data.edit_bones.get(f"Joint_{boneID}")
+    # boneToStopAt = armature.data.edit_bones.get(f"Joint_221")
+    # if boneToGetLocationFrom:
+    #     # add all parent bones
+    #     bonepos = boneToGetLocationFrom.head
+    #     while boneToGetLocationFrom.parent and boneToGetLocationFrom != boneToStopAt:
+    #         boneToGetLocationFrom = boneToGetLocationFrom.parent
+    #         bonepos[0] += boneToGetLocationFrom.head[0]
+    #         bonepos[1] += boneToGetLocationFrom.head[1]
+    #         bonepos[2] += boneToGetLocationFrom.head[2]
     # Link the action to the armature's animation data
     if not armature.animation_data:
         armature.animation_data_create()
@@ -69,22 +80,22 @@ def LinkAnimation(boneID, action, rotation, position):
         objectmode()
     for frame, (rot, pos) in enumerate(rotposzip(rotation, position)):
         if rot:
-            rotation_rad = Euler([math.radians(angle / 10.0) for angle in to_xzy(rot)], 'XZY')
-            # rotation_rad[2] += math.pi/2.0
+            rotation_rad = Euler([math.radians(angle / 10.0) for angle in to_xzy(rot)], 'XYZ')
+
+            if boneID != 1001 and boneID != 221:
+                rotation_rad[1] -= math.pi
             # bpy.data.scenes["Scene"].tool_settings.transform_pivot_point
             bone.rotation_euler = rotation_rad
+            # bone.location = bpy.data.objects["Root_Animator_1001"].pose.bones[f'Joint_{boneID}'].position
             bone.keyframe_insert(data_path="rotation_euler", frame=frame, index=-1)
         
         if pos:
             bone.location = pos
             bone.keyframe_insert(data_path="location", frame=frame, index=-1)
-        # else:
-            # do not change pos but put in a keyframe
-            # bone.keyframe_insert(data_path="location", frame=frame, index=-1)
+        else:
+            bone.location = (0, 0, 0)
+            bone.keyframe_insert(data_path="location", frame=frame, index=-1)
     objectmode()
-    # if len(rotation) > 0:
-    #     print("Max rot value:", max([max(i) for i in rotation]))
-    #     print("Min rot value:", min([min(i) for i in rotation]))
 
 
 # Anim data format:
