@@ -62,10 +62,6 @@ class ImportFaceButton(Operator):
         cmdList = readDL(0)
         parseDL(cmdList)
         bpy.context.scene.frame_end = 820
-        for armature in bpy.data.objects:
-            if armature.type == 'ARMATURE':
-                for joint in armature.pose.bones:
-                    joint.rotation_mode = 'XYZ'
         return {"FINISHED"}
 
 class ExportFaceButton(Operator):
@@ -79,7 +75,14 @@ class ExportFaceButton(Operator):
         return context.mode == "OBJECT"
 
     def execute(self, context):
+        armatureList = []
+        for armature in bpy.data.objects:
+            if armature.type == 'ARMATURE':
+                armatureList.append(armature)
 
+        if len(armatureList) == 0:
+            self.report({"ERROR"}, "Nothing to export! Make sure you've imported or built a Mario Face!")
+            return {"CANCELLED"}
         return {"FINISHED"}
 
 
