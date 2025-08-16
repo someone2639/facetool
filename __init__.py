@@ -83,7 +83,7 @@ class ExportFaceButton(Operator):
         return {"FINISHED"}
 
 
-class GoddardSidebar(Panel):
+class PANEL_PT_GoddardSidebar(Panel):
     bl_label = "Mario Face"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
@@ -98,7 +98,7 @@ class GoddardSidebar(Panel):
 classes = [
     ImportFaceButton,
     ExportFaceButton,
-    GoddardSidebar,
+    PANEL_PT_GoddardSidebar,
 ]
 
 def register():

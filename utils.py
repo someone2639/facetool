@@ -23,7 +23,7 @@ def to_xzy(xyz):
     return [xyz[0], xyz[2], xyz[1]]
 
 def vec_deg2rad(rot):
-    return [math.radians(angle) for angle in to_xzy(rot)]
+    return [math.radians(angle) for angle in rot]
 
 def vec_rad2deg(rot):
     return [math.degrees(angle) for angle in rot]

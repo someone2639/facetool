@@ -70,7 +70,8 @@ def position_bone(boneName, position, rotation_deg):
 
     R = Matrix.LocRotScale(
             position,
-            Euler(vec_deg2rad(rotation_deg), "XYZ"),
+            None,
+            # Euler(vec_deg2rad(rotation_deg), "XYZ"),
             None
         )
 
@@ -197,11 +198,9 @@ def parseDL(cmdList):
                 else:
                     if cmd.vec == [0, 0, 0] and subGroupName != 0:
                         jointMap[curObjName].position = jointMap[subGroupName].position
-                        # print(f"Set Joint_{curObjName} to parent ({subGroupName}) pos {jointMap[subGroupName].position}")
-                        position_bone(curObjName, jointMap[curObjName].position, jointMap[curObjName].rotation)
                     else:
-                        # print(f"Set Joint_{curObjName} to literal {cmd.vec}")
                         jointMap[curObjName].position = cmd.vec
+                    position_bone(curObjName, jointMap[curObjName].position, jointMap[curObjName].rotation)
                 print(f"END SetAttachOffset")
             case DLCmd.AttachTo:
                 if curObjType != DNode.D_ANIMATOR:

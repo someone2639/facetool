@@ -76,30 +76,16 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
             if frame==0:
                 print(f"Cur_rot {cur_rotation} Base {base_rotation}")
 
-            if bone.parent:
-                cur_rotation[0] -= base_rotation[0]
-                cur_rotation[1] -= base_rotation[1]
-                cur_rotation[2] -= base_rotation[2]
-            else:
-                cur_rotation[0] /= 2.0
-                cur_rotation[1] /= 2.0
-                cur_rotation[2] /= 2.0
+            # if bone.parent:
+            cur_rotation[0] -= base_rotation[0]
+            cur_rotation[1] -= base_rotation[1]
+            cur_rotation[2] -= base_rotation[2]
+            # else:
+            cur_rotation[0] /= 2.0
+            cur_rotation[1] /= 2.0
+            cur_rotation[2] /= 2.0
 
             cur_rotation_rad = Euler([math.radians(angle) for angle in cur_rotation], JOINT_ROTATION_MODE)
-
-            #     # cur_rotation_rad[2] -= math.pi
-            #     # cur_rotation_rad[0] -= math.pi
-            #     parent_rotation = bone.parent.rotation_euler
-
-            #     cur_rotation_mtx = cur_rotation_rad.to_matrix().to_4x4()
-            #     parent_mtx = parent_rotation.to_matrix().to_4x4()
-            #     # if boneID not in [1001, 221]:
-            #     #     cur_rotation_rad[1] += math.pi
-            #     #     cur_rotation_rad[0] += math.pi
-            #     # bpy.data.scenes["Scene"].tool_settings.transform_pivot_point
-            #     bone.rotation_euler = (cur_rotation_mtx.to_4x4() @ parent_mtx.to_4x4()).to_euler()
-            # else:
-            #     pass
 
             bone.rotation_euler = cur_rotation_rad
             bone.keyframe_insert(data_path="rotation_euler", frame=frame, index=-1)
