@@ -46,9 +46,9 @@ from bpy.types import Panel
 import sys
 sys.dont_write_bytecode = True
 
-class TLA_OT_operator(Operator):
+class ImportFaceButton(Operator):
     """ tooltip goes here """
-    bl_idname = "demo.operator"
+    bl_idname = "demo.importoperator"
     bl_label = "Import from gd.bin"
     bl_options = {"REGISTER", "UNDO"}
 
@@ -68,8 +68,22 @@ class TLA_OT_operator(Operator):
                     joint.rotation_mode = 'XYZ'
         return {"FINISHED"}
 
+class ExportFaceButton(Operator):
+    """ tooltip goes here """
+    bl_idname = "demo.exportoperator"
+    bl_label = "Export Face as binary"
+    bl_options = {"REGISTER", "UNDO"}
 
-class TLA_PT_sidebar(Panel):
+    @classmethod
+    def poll(cls, context):
+        return context.mode == "OBJECT"
+
+    def execute(self, context):
+
+        return {"FINISHED"}
+
+
+class GoddardSidebar(Panel):
     bl_label = "Mario Face"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
@@ -77,12 +91,14 @@ class TLA_PT_sidebar(Panel):
 
     def draw(self, context):
         col = self.layout.column(align=True)
-        prop = col.operator(TLA_OT_operator.bl_idname, text="Import Mario Face")
+        prop = col.operator(ImportFaceButton.bl_idname, text="Import Mario Face")
+        prop = col.operator(ExportFaceButton.bl_idname, text="Export Mario Face")
 
 
 classes = [
-    TLA_OT_operator,
-    TLA_PT_sidebar,
+    ImportFaceButton,
+    ExportFaceButton,
+    GoddardSidebar,
 ]
 
 def register():

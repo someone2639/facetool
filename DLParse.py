@@ -10,7 +10,7 @@ import math
 from mathutils import Euler, Vector, Matrix
 
 from .GMaterial import GMaterial
-from .utils import editmode, posemode, objectmode, to_xzy, vec_deg2rad
+from .utils import editmode, posemode, objectmode, to_xzy, vec_deg2rad, vec_rad2deg
 
 dataGrpMap = {}
 shapeMap = {}
@@ -57,30 +57,24 @@ def parent_bone(name, to):
     if pbone:
         bone.parent = pbone
     objectmode()
+    # pass
 
 
-def position_bone(boneName, position, rotation):
-    # print("position_bone",boneName,position,rotation)
+def position_bone(boneName, position, rotation_deg):
+    # print("position_bone",boneName,position,rotation_deg)
     armature = bpy.data.objects.get('Root_Animator_1001')
     editmode(armature)
     bone = armature.data.edit_bones.get(f"Joint_{boneName}")
-    bone.head = tuple(position)
-    # rotLen = math.sqrt(
-    #     (rotation[0]**2) +
-    #     (rotation[1]**2) +
-    #     (rotation[2]**2)
-    # )
-    # normRot = []
-    # if (rotLen == 0):
-    #     normRot = [0, 0, 1]
-    # else:
-    #     normRot = [r / rotLen for r in rotation]
-    # headPos = (
-    #     position[0] + (100 * normRot[0]),
-    #     position[1] + (100 * normRot[1]),
-    #     position[2] + (100 * normRot[2])
-    # )
-    bone.tail = tuple([position[0], position[1], position[2] + 100])
+    bone.head = (0, 0, 0)
+    bone.tail = (0, 0, 100)
+
+    R = Matrix.LocRotScale(
+            position,
+            Euler(vec_deg2rad(rotation_deg), "XYZ"),
+            None
+        )
+
+    bone.transform(R)
     objectmode()
 
 def parseDL(cmdList):
@@ -89,6 +83,7 @@ def parseDL(cmdList):
     global dataGrpMap
     global matGroups
     global vtxGroups
+    global jointMap
     curObjType = 0
     curObjName = 0
     subGroupName = 0
@@ -118,6 +113,7 @@ def parseDL(cmdList):
                         dataGrpMap[curObjName] = []
                     case DNode.D_NET:
                         jointMap[curObjName] = Joint(curObjName)
+                        jointMap[curObjName].name = curObjName
                         jointMap[curObjName].bone = addBone(f"Joint_{curObjName}", False)
                         netMap[curObjName] = Net(curObjName)
                         if rootNet == 0:
@@ -157,28 +153,56 @@ def parseDL(cmdList):
                 # dont have to impl on the importer since always [1,1,1]
                 pass
             case DLCmd.SetRotation:
-                if jointMap[curObjName].rotation == [0, 0, 0]:
-                    jointMap[curObjName].rotation = to_xzy(cmd.vec)
-            case DLCmd.SetAttachOffset:
-                if subGroupName != 0:
-                    if cmd.vec == [0, 0, 0]:
-                        jointMap[curObjName].position = jointMap[subGroupName].position
-                        position_bone(curObjName, jointMap[curObjName].position, [0, 0, 0])
-                    else:
-                        subgrot = Matrix.LocRotScale(
-                            jointMap[subGroupName].position,
-                            Euler(vec_deg2rad(jointMap[subGroupName].rotation), "XYZ"),
-                            None
-                        )
+                jointMap[curObjName].rotation = cmd.vec
+                # if cmd.vec != [0, 0, 0]:
+                #     jointMap[curObjName].rotation = cmd.vec
+                    # if jointMap[curObjName].parent in jointMap:
+                    #     parentrot = [j for j in jointMap[jointMap[curObjName].parent].rotation]
 
-                        finalmtx = Matrix.Translation(cmd.vec) @ subgrot
-                        jointMap[curObjName].position = finalmtx.to_translation()
-                        print(f"Using matrix math to set Joint_{curObjName} to {jointMap[curObjName].position}")
-                        print(f"btw the matrix was {finalmtx}")
-                        position_bone(curObjName, jointMap[curObjName].position, [0, 0, 0])
+                    #     cmdrad = vec_deg2rad(cmd.vec)
+                        
+                    #     parentmtx = Matrix.LocRotScale(None, Euler(parentrot, "XYZ"), None)
+                    #     cmdmtx = Matrix.LocRotScale(None, Euler(cmdrad, "XYZ"), None)
+
+                    #     jointMap[curObjName].rotation = cmdrad
+                    #     # (cmdmtx @ parentmtx).to_euler()
+                    #     print(f"SetRotation {curObjName} fulltransform {vec_rad2deg(jointMap[curObjName].rotation)}")
+                    # else:
+                    #     jointMap[curObjName].rotation = vec_deg2rad(cmd.vec)
+                    #     print(f"SetRotation {curObjName} literal {vec_rad2deg(jointMap[curObjName].rotation)}")
+            case DLCmd.SetAttachOffset:
+                print(f"SetAttachOffset {cmd.vec} curobj {curObjName} subobj {subGroupName}")
+                if jointMap[curObjName].parent in jointMap:
+                    parentpos = [j for j in jointMap[jointMap[curObjName].parent].position]
+                    parentpos[0] += cmd.vec[0]
+                    parentpos[1] += cmd.vec[1]
+                    parentpos[2] += cmd.vec[2]
+                    position_bone(curObjName, parentpos, [0, 0, 0])
                 else:
-                    jointMap[curObjName].position = cmd.vec
                     position_bone(curObjName, cmd.vec, jointMap[curObjName].rotation)
+                if iAM_MODIFYING_THE_SUBGROUP:
+                    # subgrot = Matrix.LocRotScale(
+                    #     jointMap[subGroupName].position,
+                    #     Euler(vec_deg2rad(jointMap[subGroupName].rotation), "XYZ"),
+                    #     None
+                    # )
+
+                    # finalmtx = Matrix.Translation(cmd.vec) @ subgrot
+                    # jointMap[curObjName].position = finalmtx.to_translation()
+                    # print(f"Using matrix math to set Joint_{curObjName} to {jointMap[curObjName].position}")
+                    # print(f"btw the matrix was {finalmtx}")
+                    jointMap[subGroupName].position = cmd.vec
+                    # print(f"Set SubJoint_{subGroupName} to pos {cmd.vec}")
+                    position_bone(subGroupName, jointMap[subGroupName].position, jointMap[subGroupName].rotation)
+                else:
+                    if cmd.vec == [0, 0, 0] and subGroupName != 0:
+                        jointMap[curObjName].position = jointMap[subGroupName].position
+                        # print(f"Set Joint_{curObjName} to parent ({subGroupName}) pos {jointMap[subGroupName].position}")
+                        position_bone(curObjName, jointMap[curObjName].position, jointMap[curObjName].rotation)
+                    else:
+                        # print(f"Set Joint_{curObjName} to literal {cmd.vec}")
+                        jointMap[curObjName].position = cmd.vec
+                print(f"END SetAttachOffset")
             case DLCmd.AttachTo:
                 if curObjType != DNode.D_ANIMATOR:
                     if subGroupName != 0:
@@ -207,7 +231,10 @@ def parseDL(cmdList):
                 boneID = cmd.arg1
                 if boneID == 221:
                     boneID = 1001
-                parseAnimation(boneID, animMap[curObjName])
+                if boneID in jointMap:
+                    parseAnimation(jointMap[boneID].rotation, boneID, animMap[curObjName])
+                else:
+                    parseAnimation([0, 0, 0], boneID, animMap[curObjName])
                 objectmode()
             case DLCmd.MakeNetWithSubGroup:
                 iAM_MODIFYING_THE_SUBGROUP = True
@@ -219,10 +246,13 @@ def parseDL(cmdList):
                 subGroupName = 0
                 curSkinShape = 0
             case DLCmd.MakeAttachedJoint:
-                iAM_MODIFYING_THE_SUBGROUP = False
+                if iAM_MODIFYING_THE_SUBGROUP: # Only 1 joint can be in a subgroup at a time?
+                    iAM_MODIFYING_THE_SUBGROUP = False
+
                 curObjType = DNode.D_JOINT
                 curObjName = cmd.arg1
-                jointMap[curObjName] = Joint(cmd.arg1)
+                jointMap[curObjName] = Joint(curObjName)
+                jointMap[curObjName].name = curObjName
                 # override the vtx group
                 # print(f"MakeAttachedJoint vtxgroup Joint_{curObjName}")
                 vtxGroups[curSkinShape] = objMap[curSkinShape].vertex_groups.new(
@@ -236,6 +266,7 @@ def parseDL(cmdList):
                 objectmode()
                 jointMap[curObjName].bone = addBone(f'Joint_{curObjName}', False)
                 parent_bone(curObjName, subGroupName)
+                jointMap[curObjName].parent = subGroupName
             case DLCmd.SetShapePtr:
                 if cmd.arg1 in shapeMap:
                     constructShape(cmd.arg1, shapeMap[cmd.arg1])
@@ -250,6 +281,7 @@ def parseDL(cmdList):
                 if curObjType == DNode.D_NET:
                     netMap[curObjName].shape = f"Shape_{cmd.arg1}"
             case DLCmd.SetSkinShape:
+                print(f"SetSkinShape for Armature_{cmd.arg1} and Joint_{curObjName} _{subGroupName}")
                 curSkinShape = cmd.arg1
                 o = bpy.data.objects[f"Shape_{curSkinShape}"]
 

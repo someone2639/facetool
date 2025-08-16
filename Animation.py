@@ -3,8 +3,8 @@ import math
 import mathutils
 from .main import readStruct
 from itertools import zip_longest
-from mathutils import Euler
-from .utils import editmode, posemode, objectmode, to_xzy
+from mathutils import Euler, Matrix
+from .utils import editmode, posemode, objectmode, to_xzy, JOINT_ROTATION_MODE
 
 def rotposzip(*iterables):
     for result in (grp for grp in zip_longest(*iterables, fillvalue=None)):
@@ -42,22 +42,13 @@ def set_local_rotation(obj, value):
     rot = Euler(value, 'XYZ')
     obj.rotation_euler = (obj.rotation_euler.to_matrix() @ rot.to_matrix()).to_euler(obj.rotation_mode)
 
-def LinkAnimation(boneID, action, rotation, position):
+def LinkAnimation(baserot, boneID, action, rotation, position):
     action_name = f"FaceAction_{action}"
     action = bpy.data.actions.get(action_name)
     armature = bpy.data.objects.get("Root_Animator_1001")
+
+    base_rotation = baserot
     editmode(armature)
-    # bonepos = (0, 0, 0)
-    # boneToGetLocationFrom = armature.data.edit_bones.get(f"Joint_{boneID}")
-    # boneToStopAt = armature.data.edit_bones.get(f"Joint_221")
-    # if boneToGetLocationFrom:
-    #     # add all parent bones
-    #     bonepos = boneToGetLocationFrom.head
-    #     while boneToGetLocationFrom.parent and boneToGetLocationFrom != boneToStopAt:
-    #         boneToGetLocationFrom = boneToGetLocationFrom.parent
-    #         bonepos[0] += boneToGetLocationFrom.head[0]
-    #         bonepos[1] += boneToGetLocationFrom.head[1]
-    #         bonepos[2] += boneToGetLocationFrom.head[2]
     # Link the action to the armature's animation data
     if not armature.animation_data:
         armature.animation_data_create()
@@ -76,21 +67,45 @@ def LinkAnimation(boneID, action, rotation, position):
     # Step 3: Apply Transformations (position or rotation)
     if len(rotation) > 0:
         posemode(armature)
-        bpy.data.objects["Root_Animator_1001"].pose.bones[f'Joint_{boneID}'].rotation_mode = "XYZ"
+        bpy.data.objects["Root_Animator_1001"].pose.bones[f'Joint_{boneID}'].rotation_mode = JOINT_ROTATION_MODE
         objectmode()
     for frame, (rot, pos) in enumerate(rotposzip(rotation, position)):
         if rot:
-            rotation_rad = Euler([math.radians(angle / 10.0) for angle in to_xzy(rot)], 'XYZ')
+            cur_rotation = [angle / 10.0 for angle in to_xzy(rot)]
 
-            if boneID != 1001 and boneID != 221:
-                rotation_rad[1] -= math.pi
-            # bpy.data.scenes["Scene"].tool_settings.transform_pivot_point
-            bone.rotation_euler = rotation_rad
-            # bone.location = bpy.data.objects["Root_Animator_1001"].pose.bones[f'Joint_{boneID}'].position
+            if frame==0:
+                print(f"Cur_rot {cur_rotation} Base {base_rotation}")
+
+            if bone.parent:
+                cur_rotation[0] -= base_rotation[0]
+                cur_rotation[1] -= base_rotation[1]
+                cur_rotation[2] -= base_rotation[2]
+            else:
+                cur_rotation[0] /= 2.0
+                cur_rotation[1] /= 2.0
+                cur_rotation[2] /= 2.0
+
+            cur_rotation_rad = Euler([math.radians(angle) for angle in cur_rotation], JOINT_ROTATION_MODE)
+
+            #     # cur_rotation_rad[2] -= math.pi
+            #     # cur_rotation_rad[0] -= math.pi
+            #     parent_rotation = bone.parent.rotation_euler
+
+            #     cur_rotation_mtx = cur_rotation_rad.to_matrix().to_4x4()
+            #     parent_mtx = parent_rotation.to_matrix().to_4x4()
+            #     # if boneID not in [1001, 221]:
+            #     #     cur_rotation_rad[1] += math.pi
+            #     #     cur_rotation_rad[0] += math.pi
+            #     # bpy.data.scenes["Scene"].tool_settings.transform_pivot_point
+            #     bone.rotation_euler = (cur_rotation_mtx.to_4x4() @ parent_mtx.to_4x4()).to_euler()
+            # else:
+            #     pass
+
+            bone.rotation_euler = cur_rotation_rad
             bone.keyframe_insert(data_path="rotation_euler", frame=frame, index=-1)
-        
+
         if pos:
-            bone.location = pos
+            bone.location = [p / 10.0 for p in pos]
             bone.keyframe_insert(data_path="location", frame=frame, index=-1)
         else:
             bone.location = (0, 0, 0)
@@ -102,7 +117,7 @@ def LinkAnimation(boneID, action, rotation, position):
 #  s32 count (-1 if over, 0 if empty)
 #  u32 dataType (use the lookup struct)
 #  u32 address
-def parseAnimation(jointID, offset):
+def parseAnimation(baseRot, jointID, offset):
     animdata = []
     animdata.append(readStruct(">lLL", offset))
     offset += 12
@@ -129,4 +144,4 @@ def parseAnimation(jointID, offset):
                 animRot.append(vals[0:3])
                 animPos.append(vals[3:6])
                 a_offset += 12
-        LinkAnimation(jointID, i, animRot, animPos)
+        LinkAnimation(to_xzy(baseRot), jointID, i, animRot, animPos)

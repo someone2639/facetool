@@ -1,6 +1,8 @@
 import bpy
 import math
 
+JOINT_ROTATION_MODE = 'XYZ'
+
 def editmode(o):
     bpy.context.view_layer.objects.active = o
     o.select_set(True)
@@ -22,3 +24,6 @@ def to_xzy(xyz):
 
 def vec_deg2rad(rot):
     return [math.radians(angle) for angle in to_xzy(rot)]
+
+def vec_rad2deg(rot):
+    return [math.degrees(angle) for angle in rot]
