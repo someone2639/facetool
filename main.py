@@ -2,9 +2,9 @@ import struct
 
 fb = []
 
-def readFile():
+def readFile(binfile):
     global fb
-    with open("/home/faris/Devel/goddard/gd.bin", "rb") as f:
+    with open(binfile, "rb") as f:
         fb = f.read()
 
 def readStruct(fmt, offset):

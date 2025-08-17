@@ -76,14 +76,15 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
             if frame==0:
                 print(f"Cur_rot {cur_rotation} Base {base_rotation}")
 
-            # if bone.parent:
-            cur_rotation[0] -= base_rotation[0]
-            cur_rotation[1] -= base_rotation[1]
-            cur_rotation[2] -= base_rotation[2]
+            if bone.parent:
+                cur_rotation[0] -= base_rotation[0]
+                cur_rotation[1] -= base_rotation[1]
+                cur_rotation[2] -= base_rotation[2]
+            # TODO: rotation/2 seems to be correct, except when mario spins
             # else:
-            cur_rotation[0] /= 2.0
-            cur_rotation[1] /= 2.0
-            cur_rotation[2] /= 2.0
+            #     cur_rotation[0] /= 2.0
+            #     cur_rotation[1] /= 2.0
+            #     cur_rotation[2] /= 2.0
 
             cur_rotation_rad = Euler([math.radians(angle) for angle in cur_rotation], JOINT_ROTATION_MODE)
 
@@ -93,9 +94,9 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
         if pos:
             bone.location = [p / 10.0 for p in pos]
             bone.keyframe_insert(data_path="location", frame=frame, index=-1)
-        else:
-            bone.location = (0, 0, 0)
-            bone.keyframe_insert(data_path="location", frame=frame, index=-1)
+        # else:
+        #     bone.location = (0, 0, 0)
+        #     bone.keyframe_insert(data_path="location", frame=frame, index=-1)
     objectmode()
 
 
