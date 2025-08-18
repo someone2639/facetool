@@ -27,3 +27,70 @@ def vec_deg2rad(rot):
 
 def vec_rad2deg(rot):
     return [math.degrees(angle) for angle in rot]
+
+# From Fast64
+def getFrameInterval(action: bpy.types.Action):
+    scene = bpy.context.scene
+    def getIntersectionInterval():
+        """
+        intersect action range and scene range
+        Note: this doesn't handle correctly the case where the two ranges don't intersect, not a big deal
+        """
+
+        frame_start = max(
+            scene.frame_start,
+            int(round(action.frame_range[0])),
+        )
+
+        frame_last = max(
+            min(
+                scene.frame_end,
+                int(round(action.frame_range[1])),
+            ),
+            frame_start,
+        )
+
+        return frame_start, frame_last
+
+    range_get_by_choice = {
+        "action": lambda: (int(round(action.frame_range[0])), int(round(action.frame_range[1]))),
+        "scene": lambda: (int(round(scene.frame_start)), int(round(scene.frame_end))),
+        "intersect_action_and_scene": getIntersectionInterval,
+    }
+
+    return range_get_by_choice["action"]()
+
+def findStartBones(armatureObj):
+    noParentBones = sorted(
+        [
+            bone.name
+            for bone in armatureObj.data.bones
+            if bone.parent is None
+        ]
+    )
+
+    if len(noParentBones) == 0:
+        raise PluginError(
+            "No non switch option start bone could be found "
+            + "in "
+            + armatureObj.name
+            + ". Is this the root armature?"
+        )
+    else:
+        return noParentBones
+
+    if len(noParentBones) == 1:
+        return noParentBones[0]
+    elif len(noParentBones) == 0:
+        raise PluginError(
+            "No non switch option start bone could be found "
+            + "in "
+            + armatureObj.name
+            + ". Is this the root armature?"
+        )
+    else:
+        raise PluginError(
+            "Too many parentless bones found. Make sure your bone hierarchy starts from a single bone, "
+            + 'and that any bones not related to a hierarchy have their geolayout command set to "Ignore".'
+        )
+
