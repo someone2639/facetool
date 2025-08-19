@@ -94,3 +94,10 @@ def findStartBones(armatureObj):
             + 'and that any bones not related to a hierarchy have their geolayout command set to "Ignore".'
         )
 
+def get_weights(ob, vgroup):
+    group_index = vgroup.index
+    for i, v in enumerate(ob.data.vertices):
+        for g in v.groups:
+            if g.group == group_index:
+                yield (i, g.weight)
+                break

@@ -10,7 +10,7 @@ import math
 from mathutils import Euler, Vector, Matrix
 
 from .GMaterial import GMaterial
-from .utils import editmode, posemode, objectmode, getFrameInterval, vec_rad2deg, to_xzy
+from .utils import editmode, posemode, objectmode, getFrameInterval, vec_rad2deg, to_xzy, get_weights
 
 # TODO: binary exporter too (as a separate thing?)
 # TODO: write all names into an enum before writing data
@@ -21,6 +21,10 @@ class Exporter():
         self.namesToWrite = []
         self.enums = []
         self.actionCount = 0
+
+
+        self.animGroups = []
+        self.skinWeights = {}
         if is_binary:
             self.file = open(file, "wb+")
         else:
@@ -128,8 +132,7 @@ class Exporter():
                                                                 curMtx.to_euler()
                                                             )
                                                         )
-                                 ]
-                                )
+                                ])
 
             # set frame back
             bpy.context.scene.frame_set(currentFrame)
@@ -203,7 +206,6 @@ class Exporter():
             mainDListBuf += f"        CallList(dynlist_{shape_name}_shape),\n"
         mainDListBuf += f"    EndGroup(DYNOBJ_{name.upper()}_SHAPES_GROUP),\n"
         mainDListBuf +=  "    StartGroup(1),\n"
-        mainDListBuf +=  "    StartGroup(1),\n"
 
         self.enums.append(f"DYNOBJ_{name.upper()}_NET")
         mainDListBuf += f"        MakeDynObj(D_NET, DYNOBJ_{name.upper()}_NET),\n"
@@ -216,6 +218,32 @@ class Exporter():
         mainDListBuf +=  "            SetScale(1.0, 1.0, 1.0),\n"
         mainDListBuf +=  "            SetRotation(0.0, 0.0, 0.0),\n"
         mainDListBuf +=  "            SetAttachOffset(0.0, 0.0, 0.0),\n"
+
+
+        # TODO: for EACH shape, make dynobj and then attachedjoints
+        for obj in bpy.data.objects:
+            if obj.parent == self.armature and obj.type == "MESH":
+                loc = obj.location
+                mainDListBuf += f"""
+                MakeDynObj(D_NET, DYNOBJ_{obj.name.upper()}_NET),
+                    SetType(3),
+                    SetShapePtr(DYNOBJ_{obj.name.upper()}_SHAPE),
+                    AttachTo(0xd, DYNOBJ_{name.upper()}_NET),
+                    SetScale(1.0, 1.0, 1.0),
+                    SetRotation(0.0, 0.0, 0.0),
+                    SetAttachOffset({loc[0]}, {loc[1]}, {loc[2]}),
+"""
+
+
+        for skinName in self.skinWeights:
+            # mainDListBuf += f"    MakeNetWithSubGroup({skinName}),\n"
+            # mainDListBuf += f"        AttachTo(0xd, {skinName.replace("_SKIN", "")}),\n"
+            # mainDListBuf += f"        SetScale(1.0, 1.0, 1.0),\n"
+            mainDListBuf += self.skinWeights[skinName]
+            # mainDListBuf += f"    EndNetWithSubGroup({skinName}),\n"
+
+        for animator in self.animGroups:
+            mainDListBuf += animator
 
         mainDListBuf +=  "    EndGroup(0x1),\n"
         mainDListBuf +=  "    UseObj(0x1),\n"
@@ -231,9 +259,51 @@ class Exporter():
             self.file.write(f"    {nm},\n")
         self.file.write("};\n")
 
+    # return (shape to linkwith, skin_net name, skin data)
+    def getSkinData(self, joint):
+        myVertexGroup = None
+        myShape = None
+        for obj in bpy.data.objects:
+            for vg in obj.vertex_groups:
+                if vg.name == joint.name:
+                    myVertexGroup = vg
+                    myShape = obj
+
+        if myVertexGroup is None:
+            # Nothing to skin
+            return ("", "", "")
+        
+        self.enums.append(f"DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}_SKIN_NET")
+        self.enums.append(f"DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}")
+        self.enums.append(f'DYNOBJ_{myShape.name.upper()}_NET')
+
+        rot = vec_rad2deg(joint.rotation_euler)
+        pos = joint.location
+        skinBuffer =  f"    MakeNetWithSubGroup(DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}_SKIN_NET),\n"
+        skinBuffer += f"        AttachTo(0xd, DYNOBJ_{myShape.name.upper()}_NET),\n"
+        skinBuffer += f"        SetScale(1.0, 1.0, 1.0),\n"
+        skinBuffer += f"        SetRotation(0.0, 0.0, 0.0),\n"
+        skinBuffer += f"        SetAttachOffset(0.0, 0.0, 0.0),\n"
+        skinBuffer += f"        MakeAttachedJoint(DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}),\n"
+        skinBuffer += f"            SetRotation({rot[0]}, {rot[1]}, {rot[2]}),\n"
+        skinBuffer += f"            SetScale(1.0, 1.0, 1.0),\n"
+        skinBuffer += f"            SetAttachOffset({pos[0]}, {pos[1]}, {pos[2]}),\n"
+
+        weightcount = 0
+        for idx, weight in get_weights(myShape, myVertexGroup):
+            if weight != 0.0:
+                weightcount += 1
+                skinBuffer += f"                SetSkinWeight({idx}, {weight * 100.0}),\n"
+        skinBuffer += f"    EndNetWithSubGroup(DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}_SKIN_NET),\n"
+
+        return (f"DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}", f"DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}_SKIN_NET", skinBuffer)
+
+
     def export(self, armature):
         self.armature = armature
         self.namesToWrite = []
+
+        # self.enums.append(f"DYNOBJ_MARIO_MAIN_ANIMATOR = 1001")
 
         # Get shape data
         vtxs = []
@@ -248,14 +318,35 @@ class Exporter():
                 shapes.append(s)
                 self.namesToWrite.append(obj.name)
 
-        # Get anim data
+        # Get anim data and skin weights
         animData = []
         posemode(armature)
         import time
 
         start_time = time.time()
         for bone in armature.pose.bones:
-            animData.append(self.getAnimData(bone))
+            shapetolink, skinName, skinData = self.getSkinData(bone)
+            if skinName == "":
+                # No data
+                pass
+            elif skinName not in self.skinWeights:
+                self.skinWeights[skinName] = skinData
+            else:
+                self.skinWeights[skinName] += skinData
+            # animData.append(self.getAnimData(bone))
+            # generate the commands
+            self.enums.append(f"DYNOBJ_{bone.name.upper()}_ANIMDATA_GROUP")
+            self.enums.append(f"DYNOBJ_{bone.name.upper()}_ANIMATOR")
+
+        #     if shapetolink != "":
+        #         self.animGroups.append(f"""
+        # MakeDynObj(D_DATA_GRP, DYNOBJ_{bone.name.upper()}_ANIMDATA_GROUP),
+        #     LinkWithPtr(&anim_{bone.name}),
+        # MakeDynObj(D_ANIMATOR, DYNOBJ_{bone.name.upper()}_ANIMATOR),
+        #     AttachTo(0x0, DYNOBJ_MARIO_MAIN_ANIMATOR),
+        #     SetNodeGroup(DYNOBJ_{bone.name.upper()}_ANIMDATA_GROUP),
+        #     LinkWith({shapetolink}),
+        #         """)
         end_time = time.time()
         print(f"Animations exported in {end_time - start_time} seconds.")
         objectmode()
@@ -267,13 +358,14 @@ class Exporter():
         self.WriteHeader()
         self.WriteEnums()
 
-        for anim in animData:
-            self.file.write(anim)
+        # for anim in animData:
+        #     self.file.write(anim)
 
         for v, t, s in zip(vtxs, tris, shapes):
             self.file.write(v)
             self.file.write(t)
             self.file.write(s)
+
 
         self.file.write(mainDList)
 
