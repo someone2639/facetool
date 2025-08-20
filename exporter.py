@@ -233,14 +233,9 @@ class Exporter():
                     SetRotation(0.0, 0.0, 0.0),
                     SetAttachOffset({loc[0]}, {loc[1]}, {loc[2]}),
 """
-
-
-        for skinName in self.skinWeights:
-            # mainDListBuf += f"    MakeNetWithSubGroup({skinName}),\n"
-            # mainDListBuf += f"        AttachTo(0xd, {skinName.replace("_SKIN", "")}),\n"
-            # mainDListBuf += f"        SetScale(1.0, 1.0, 1.0),\n"
-            mainDListBuf += self.skinWeights[skinName]
-            # mainDListBuf += f"    EndNetWithSubGroup({skinName}),\n"
+                skins = [name for skinName in self.skinWeights if obj.name.upper() in name]
+                for skin in skins:
+                    mainDListBuf += self.skinWeights[skin]
 
         for animator in self.animGroups:
             mainDListBuf += animator
@@ -281,6 +276,7 @@ class Exporter():
         pos = joint.location
         skinBuffer =  f"    MakeNetWithSubGroup(DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}_SKIN_NET),\n"
         skinBuffer += f"        AttachTo(0xd, DYNOBJ_{myShape.name.upper()}_NET),\n"
+        skinBuffer += f"        SetSkinShape(DYNOBJ_{myShape.name.upper()}_SHAPE),\n"
         skinBuffer += f"        SetScale(1.0, 1.0, 1.0),\n"
         skinBuffer += f"        SetRotation(0.0, 0.0, 0.0),\n"
         skinBuffer += f"        SetAttachOffset(0.0, 0.0, 0.0),\n"
