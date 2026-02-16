@@ -101,7 +101,7 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
 
 
 # Anim data format:
-#  s32 count (-1 if over, 0 if empty)
+#  s32 count (-1 if done, 0 if empty)
 #  u32 dataType (use the lookup struct)
 #  u32 address
 def parseAnimation(baseRot, jointID, offset):

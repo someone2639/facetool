@@ -310,3 +310,53 @@ def parseDL(cmdList):
                 pass
     # if 221 in objMap:
     #     objMap[221].rotation_euler = (math.radians(90), 0, 0)
+    remove_bones_without_animation()
+
+def remove_bones_without_animation():
+    armature_obj = bpy.context.active_object
+    if not armature_obj or armature_obj.type != 'ARMATURE':
+        print("Please select an armature object.")
+        return
+
+    armature_data = armature_obj.data
+    
+    # Ensure there is animation data (an action) linked to the object
+    action = armature_obj.animation_data.action if armature_obj.animation_data else None
+    if not action:
+        print("No animation data found on the armature object. Exiting.")
+        return
+
+    # Get a list of bones that *do* have F-curves (animation channels)
+    bones_with_animation = set()
+    for fcurve in action.fcurves:
+        # data_path will be something like "pose.bones[\"BoneName\"].location"
+        # Extract the bone name from the data path
+        try:
+            bone_name_start = fcurve.data_path.find('["') + 2
+            bone_name_end = fcurve.data_path.find('"]')
+            bone_name = fcurve.data_path[bone_name_start:bone_name_end]
+            if bone_name:
+                bones_with_animation.add(bone_name)
+        except ValueError:
+            continue # Skip if the data_path doesn't match the expected format
+
+    # List of bones to delete
+    # This must be done in a separate list to avoid issues while iterating and deleting
+    bones_to_delete_names = [bone.name for bone in armature_data.bones if bone.name not in bones_with_animation]
+
+    if not bones_to_delete_names:
+        print("All bones have animation data, or no bones to delete.")
+        return
+        
+    # Switch to Edit Mode to delete bones
+    editmode(armature_obj)
+    edit_bones = armature_data.edit_bones
+
+    for name in bones_to_delete_names:
+        if name in edit_bones:
+            print(f"Deleting bone: {name}")
+            edit_bones.remove(edit_bones[name]) # Bones are deleted using remove() in edit mode
+
+    # Switch back to Object Mode
+    objectmode()
+    print("Script finished.")
