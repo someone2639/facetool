@@ -20,7 +20,7 @@ def objectmode():
         bpy.ops.object.mode_set(mode='OBJECT')
 
 def to_xzy(xyz):
-    return [xyz[0], xyz[2], xyz[1]]
+    return [xyz[0], xyz[2], -xyz[1]]
 
 def vec_deg2rad(rot):
     return [math.radians(angle) for angle in rot]

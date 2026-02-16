@@ -73,14 +73,16 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
         if rot:
             cur_rotation = [angle / 10.0 for angle in to_xzy(rot)]
 
-            if frame==0:
-                print(f"Cur_rot {cur_rotation} Base {base_rotation}")
+            # cur_rotation[2] *= -1
 
-            if bone.parent:
-                cur_rotation[0] -= base_rotation[0]
-                cur_rotation[1] -= base_rotation[1]
-                cur_rotation[2] -= base_rotation[2]
-            # TODO: rotation/2 seems to be correct, except when mario spins
+            if frame==0:
+                print(f"{boneID}: Cur_rot {cur_rotation} Base {base_rotation}")
+
+            cur_rotation[0] -= base_rotation[0]
+            cur_rotation[1] -= base_rotation[1]
+            cur_rotation[2] -= base_rotation[2]
+            # if boneID != 1001:
+            # # TODO: rotation/2 seems to be correct, except when mario spins
             # else:
             #     cur_rotation[0] /= 2.0
             #     cur_rotation[1] /= 2.0

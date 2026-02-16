@@ -2,6 +2,7 @@ from .main import readStruct
 import bpy
 import bmesh
 from .GMaterial import matGroups
+from .utils import to_xzy
 
 class Shape():
     def __init__(self, name, verts, faces, mats):
@@ -23,7 +24,8 @@ def readVerts(offset, count):
     ret = []
     for i in range(count):
         v = readStruct(">hhh", offset)
-        ret.append(v)
+        v2 = v
+        ret.append(v2)
         offset += 6
     return ret
 
