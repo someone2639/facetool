@@ -19,7 +19,7 @@ def objectmode():
     if bpy.context.mode != "OBJECT":
         bpy.ops.object.mode_set(mode='OBJECT')
 
-def to_xzy(xyz):
+def coord_space_correction(xyz):
     return [xyz[0], xyz[2], -xyz[1]]
 
 def vec_deg2rad(rot):

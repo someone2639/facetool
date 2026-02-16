@@ -10,7 +10,7 @@ import math
 from mathutils import Euler, Vector, Matrix
 
 from .GMaterial import GMaterial
-from .utils import editmode, posemode, objectmode, to_xzy, vec_deg2rad, vec_rad2deg
+from .utils import editmode, posemode, objectmode, coord_space_correction, vec_deg2rad, vec_rad2deg
 
 dataGrpMap = {}
 shapeMap = {}

@@ -4,7 +4,7 @@ import mathutils
 from .main import readStruct
 from itertools import zip_longest
 from mathutils import Euler, Matrix
-from .utils import editmode, posemode, objectmode, to_xzy, JOINT_ROTATION_MODE
+from .utils import editmode, posemode, objectmode, coord_space_correction, JOINT_ROTATION_MODE
 
 def rotposzip(*iterables):
     for result in (grp for grp in zip_longest(*iterables, fillvalue=None)):
@@ -71,7 +71,7 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
         objectmode()
     for frame, (rot, pos) in enumerate(rotposzip(rotation, position)):
         if rot:
-            cur_rotation = [angle / 10.0 for angle in to_xzy(rot)]
+            cur_rotation = [angle / 10.0 for angle in coord_space_correction(rot)]
 
             # cur_rotation[2] *= -1
 
@@ -133,4 +133,4 @@ def parseAnimation(baseRot, jointID, offset):
                 animRot.append(vals[0:3])
                 animPos.append(vals[3:6])
                 a_offset += 12
-        LinkAnimation(to_xzy(baseRot), jointID, i, animRot, animPos)
+        LinkAnimation(coord_space_correction(baseRot), jointID, i, animRot, animPos)

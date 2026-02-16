@@ -10,7 +10,7 @@ import math
 from mathutils import Euler, Vector, Matrix
 
 from .GMaterial import GMaterial
-from .utils import editmode, posemode, objectmode, getFrameInterval, vec_rad2deg, to_xzy, get_weights
+from .utils import editmode, posemode, objectmode, getFrameInterval, vec_rad2deg, coord_space_correction, get_weights
 
 # TODO: binary exporter too (as a separate thing?)
 # TODO: write all names into an enum before writing data
@@ -127,7 +127,7 @@ class Exporter():
                 bpy.context.scene.frame_set(frame)
                 curMtx = joint.matrix
                 positions.append([int(p) * 10 for p in curMtx.to_translation()])
-                rotations.append([int(r) * 10 for r in to_xzy(
+                rotations.append([int(r) * 10 for r in coord_space_correction(
                                                             vec_rad2deg(
                                                                 curMtx.to_euler()
                                                             )

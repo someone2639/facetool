@@ -2,7 +2,7 @@ from .main import readStruct
 import bpy
 import bmesh
 from .GMaterial import matGroups
-from .utils import to_xzy
+from .utils import coord_space_correction
 
 class Shape():
     def __init__(self, name, verts, faces, mats):
