@@ -22,9 +22,15 @@ def objectmode():
     if bpy.context.mode != "OBJECT":
         bpy.ops.object.mode_set(mode="OBJECT")
 
+def angle_wrap_deg(vec: list[float], bound: float):
+    for i in range(len(vec)):
+        while vec[i] < -bound:
+            vec[i] += bound
+        while vec[i] > bound:
+            vec[i] -= bound
 
 def coord_space_correction(xyz):
-    return [xyz[1], xyz[0], xyz[2]]
+    return [xyz[2], xyz[0], xyz[1]]
 
 
 def vec_deg2rad(rot):

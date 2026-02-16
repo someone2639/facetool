@@ -45,7 +45,7 @@ def addRootAnimator():
     bpy.data.objects["Root_Animator_1001"].show_in_front = True
 
 
-def addBone(name, orient):
+def addBone(name: str, orient: bool):
     armature = bpy.data.objects.get("Root_Animator_1001")
     editmode(armature)
     bpy.ops.armature.bone_primitive_add()
@@ -60,11 +60,11 @@ def addBone(name, orient):
     return new_bone
 
 
-def parent_bone(name, to):
+def parent_bone(name: int, parent_name: int):
     armature = bpy.data.objects.get("Root_Animator_1001")
     editmode(armature)
     bone = armature.data.edit_bones.get(f"Joint_{name}")
-    pbone = armature.data.edit_bones.get(f"Joint_{to}")
+    pbone = armature.data.edit_bones.get(f"Joint_{parent_name}")
     if pbone:
         bone.parent = pbone
     objectmode()
@@ -130,6 +130,8 @@ def parseDL(cmdList):
                             f"Joint_{curObjName}", False
                         )
                         netMap[curObjName] = Net(curObjName)
+
+                        # Parent the animated bones to the root bone
                         if rootNet == 0:
                             rootNet = curObjName
                             parent_bone(curObjName, 1001)
