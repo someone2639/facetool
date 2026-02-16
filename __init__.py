@@ -46,23 +46,24 @@ from bpy.types import Operator
 from bpy.types import Panel, PropertyGroup
 
 import sys, os
+
 sys.dont_write_bytecode = True
+
 
 class FaceProperties(PropertyGroup):
     gd_bin_file: StringProperty(
         name="Path to gd.bin",
         description="This file has all the face data to import.",
-        subtype= 'FILE_NAME'
+        subtype="FILE_NAME",
     )
     gd_out_file: StringProperty(
-        name="Output C file",
-        description="Where should this go?",
-        subtype= 'FILE_NAME'
+        name="Output C file", description="Where should this go?", subtype="FILE_NAME"
     )
 
 
 class ImportFaceButton(Operator):
-    """ tooltip goes here """
+    """tooltip goes here"""
+
     bl_idname = "demo.importoperator"
     bl_label = "Import from gd.bin"
     bl_options = {"REGISTER", "UNDO"}
@@ -84,8 +85,10 @@ class ImportFaceButton(Operator):
             self.report({"ERROR"}, "No import file specified!")
             return {"CANCELLED"}
 
+
 class ExportFaceButton(Operator):
-    """ tooltip goes here """
+    """tooltip goes here"""
+
     bl_idname = "demo.exportoperator"
     bl_label = "Export Face as binary"
     bl_options = {"REGISTER", "UNDO"}
@@ -97,11 +100,14 @@ class ExportFaceButton(Operator):
     def execute(self, context):
         armatureList = []
         for armature in bpy.data.objects:
-            if armature.type == 'ARMATURE':
+            if armature.type == "ARMATURE":
                 armatureList.append(armature)
 
         if len(armatureList) == 0:
-            self.report({"ERROR"}, "Nothing to export! Make sure you've imported or built a Mario Face!")
+            self.report(
+                {"ERROR"},
+                "Nothing to export! Make sure you've imported or built a Mario Face!",
+            )
             return {"CANCELLED"}
 
         output_file = bpy.path.abspath(context.scene.face_props.gd_out_file)
@@ -128,7 +134,6 @@ class PANEL_PT_GoddardSidebar(Panel):
     bl_region_type = "UI"
     bl_category = "Mario Face"
 
-
     def draw(self, context):
         scene = context.scene
         faceprops = scene.face_props
@@ -146,6 +151,7 @@ classes = [
     PANEL_PT_GoddardSidebar,
 ]
 
+
 def register():
     for c in classes:
         bpy.utils.register_class(c)
@@ -161,4 +167,4 @@ if __name__ == "__main__":
     register()
 
     # test call
-    bpy.ops.import_3dm.some_data('INVOKE_DEFAULT')
+    bpy.ops.import_3dm.some_data("INVOKE_DEFAULT")

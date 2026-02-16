@@ -4,12 +4,14 @@ import bmesh
 from .GMaterial import matGroups
 from .utils import coord_space_correction
 
-class Shape():
+
+class Shape:
     def __init__(self, name, verts, faces, mats):
         self.name = name
         self.verts = verts
         self.faces = faces
         self.mats = mats
+
 
 def add_mesh(m, verts, faces, col_name="Collection"):
     mesh = m
@@ -19,15 +21,16 @@ def add_mesh(m, verts, faces, col_name="Collection"):
     bpy.context.view_layer.objects.active = obj
     mesh.from_pydata(verts, [], faces)
 
+
 def readVerts(offset, count):
     print(f"Reading {count} vertices from {offset}")
     ret = []
     for i in range(count):
         v = readStruct(">hhh", offset)
-        v2 = v
-        ret.append(v2)
+        ret.append(v)
         offset += 6
     return ret
+
 
 def registerMats(obj, matID):
     mats = matGroups[matID]
@@ -38,13 +41,14 @@ def registerMats(obj, matID):
         node_tree = new_mat.node_tree
         nodes = node_tree.nodes
 
-        bsdf = nodes.get("Principled BSDF") 
-        bsdf.inputs['Base Color'].default_value = tuple(m.ambient)
+        bsdf = nodes.get("Principled BSDF")
+        bsdf.inputs["Base Color"].default_value = tuple(m.ambient)
         # TODO: where to put diffuse color? is it a normal?
         # bsdf.inputs['Base Color'].default_value = tuple(m.diffuse)
 
         obj.data.materials.append(new_mat)
-        obj.active_material_index = len(obj.data.materials) - 1 
+        obj.active_material_index = len(obj.data.materials) - 1
+
 
 def readFaces(offset, count):
     retFaces = []
@@ -55,6 +59,7 @@ def readFaces(offset, count):
         retMats.append(v[0])
         offset += 8
     return (retFaces, retMats)
+
 
 def constructShape(oId, shape):
     (v_count, flag, v_offset) = readStruct(">LLL", shape.verts)

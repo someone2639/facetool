@@ -54,3 +54,5 @@ class DLCmd:
     SetTextureST = 53
     MakeNetFromShape = 54
     MakeNetFromShapePtrPtr = 55
+
+    EndList = 58

@@ -10,18 +10,26 @@ import math
 from mathutils import Euler, Vector, Matrix
 
 from .GMaterial import GMaterial
-from .utils import editmode, posemode, objectmode, getFrameInterval, vec_rad2deg, coord_space_correction, get_weights
+from .utils import (
+    editmode,
+    posemode,
+    objectmode,
+    getFrameInterval,
+    vec_rad2deg,
+    coord_space_correction,
+    get_weights,
+)
+
 
 # TODO: binary exporter too (as a separate thing?)
 # TODO: write all names into an enum before writing data
-class Exporter():
-    def __init__(self, file, is_binary = False):
+class Exporter:
+    def __init__(self, file, is_binary=False):
         self.is_binary = is_binary
         self.armature = None
         self.namesToWrite = []
         self.enums = []
         self.actionCount = 0
-
 
         self.animGroups = []
         self.skinWeights = {}
@@ -29,6 +37,7 @@ class Exporter():
             self.file = open(file, "wb+")
         else:
             self.file = open(file, "w+")
+
     def WriteHeader(self):
         self.file.write("""#include <PR/ultratypes.h>
 
@@ -56,17 +65,23 @@ class Exporter():
         for i, poly in enumerate(mesh.polygons):
             vtxIdx = poly.vertices
             # TODO: make sure theres no n-gons
-            triBuffer += f"{{ {poly.material_index}, {vtxIdx[0]}, {vtxIdx[1]}, {vtxIdx[2]} }}, "
+            triBuffer += (
+                f"{{ {poly.material_index}, {vtxIdx[0]}, {vtxIdx[1]}, {vtxIdx[2]} }}, "
+            )
 
         triBuffer += f"}};\n"
         triBuffer += f"static struct GdFaceData faces_{name} = {{ ARRAY_COUNT(facedata_{name}), 1, facedata_{name}}};\n"
 
         # Start dynlist, link vtx and faces
-        dynlistBuf =  f"struct DynList dynlist_{name}_shape[] = {{\n"
-        dynlistBuf +=  "    BeginList(),\n"
-        dynlistBuf += f"        MakeDynObj(D_DATA_GRP, DYNOBJ_{name.upper()}_VTX_GROUP),\n"
+        dynlistBuf = f"struct DynList dynlist_{name}_shape[] = {{\n"
+        dynlistBuf += "    BeginList(),\n"
+        dynlistBuf += (
+            f"        MakeDynObj(D_DATA_GRP, DYNOBJ_{name.upper()}_VTX_GROUP),\n"
+        )
         dynlistBuf += f"            LinkWithPtr(&vtx_{name}),\n"
-        dynlistBuf += f"        MakeDynObj(D_DATA_GRP, DYNOBJ_{name.upper()}_TRI_GROUP),\n"
+        dynlistBuf += (
+            f"        MakeDynObj(D_DATA_GRP, DYNOBJ_{name.upper()}_TRI_GROUP),\n"
+        )
         dynlistBuf += f"            LinkWithPtr(&faces_{name}),\n"
 
         # Write the Material Group
@@ -74,11 +89,15 @@ class Exporter():
 
         for i, mtl in enumerate(mesh.materials):
             color = mtl.node_tree.nodes["Principled BSDF"].inputs[0].default_value
-            dynlistBuf +=  "        MakeDynObj(D_MATERIAL, 0),\n"
+            dynlistBuf += "        MakeDynObj(D_MATERIAL, 0),\n"
             dynlistBuf += f"            SetId({i}),\n"
-            dynlistBuf += f"            SetAmbient({color[0]}, {color[1]}, {color[2]}),\n"
+            dynlistBuf += (
+                f"            SetAmbient({color[0]}, {color[1]}, {color[2]}),\n"
+            )
             # TODO: no diffuse color yet
-            dynlistBuf += f"            SetDiffuse({color[0]}, {color[1]}, {color[2]}),\n"
+            dynlistBuf += (
+                f"            SetDiffuse({color[0]}, {color[1]}, {color[2]}),\n"
+            )
 
         dynlistBuf += f"    EndGroup(DYNOBJ_{name.upper()}_MTL_GROUP),\n"
 
@@ -93,16 +112,15 @@ class Exporter():
         dynlistBuf += f"        SetMaterialGroup(DYNOBJ_{name.upper()}_MTL_GROUP),\n"
 
         # Finish
-        dynlistBuf +=  "    EndList(),\n"
-        dynlistBuf +=  "};\n"
-        
+        dynlistBuf += "    EndList(),\n"
+        dynlistBuf += "};\n"
+
         return (vertBuffer, triBuffer, dynlistBuf)
 
     def getAnimData(self, joint):
         # count actions (only once?)
         # if self.actionCount == 0:
         #     self.actionCount = len(bpy.data.actions)
-
 
         animType = "GD_ANIM_EMPTY"
 
@@ -127,12 +145,12 @@ class Exporter():
                 bpy.context.scene.frame_set(frame)
                 curMtx = joint.matrix
                 positions.append([int(p) * 10 for p in curMtx.to_translation()])
-                rotations.append([int(r) * 10 for r in coord_space_correction(
-                                                            vec_rad2deg(
-                                                                curMtx.to_euler()
-                                                            )
-                                                        )
-                                ])
+                rotations.append(
+                    [
+                        int(r) * 10
+                        for r in coord_space_correction(vec_rad2deg(curMtx.to_euler()))
+                    ]
+                )
 
             # set frame back
             bpy.context.scene.frame_set(currentFrame)
@@ -176,49 +194,40 @@ class Exporter():
                 animBuffer += "\n};\n"
 
             if animType == "GD_ANIM_EMPTY":
-                animArray +=  "    { 0, GD_ANIM_EMPTY, NULL },\n"
+                animArray += "    { 0, GD_ANIM_EMPTY, NULL },\n"
             else:
                 arrlen = max(len(rotations), len(positions))
                 animArray += f"    {{ {arrlen}, {animType}, animdata_{joint.name}_action_{i} }},\n"
 
-
-
         animArray += "    END_ANIMDATA_INFO_ARR,\n"
         animArray += "};\n"
 
-
-        
-
         return animBuffer + animArray
 
-
-
-
     def getMainDListData(self, name):
-        mainDListBuf =  f"struct DynList dynlist_{name}[] = {{\n"
-        mainDListBuf +=  "    BeginList(),\n"
-        mainDListBuf +=  "    UseIntegerNames(1),\n"
+        mainDListBuf = f"struct DynList dynlist_{name}[] = {{\n"
+        mainDListBuf += "    BeginList(),\n"
+        mainDListBuf += "    UseIntegerNames(1),\n"
 
-        # TODO: unhardcode this in 
+        # TODO: unhardcode this in
         self.enums.append(f"DYNOBJ_{name.upper()}_SHAPES_GROUP = 1000")
         mainDListBuf += f"    StartGroup(DYNOBJ_{name.upper()}_SHAPES_GROUP),\n"
         for shape_name in self.namesToWrite:
             mainDListBuf += f"        CallList(dynlist_{shape_name}_shape),\n"
         mainDListBuf += f"    EndGroup(DYNOBJ_{name.upper()}_SHAPES_GROUP),\n"
-        mainDListBuf +=  "    StartGroup(1),\n"
+        mainDListBuf += "    StartGroup(1),\n"
 
         self.enums.append(f"DYNOBJ_{name.upper()}_NET")
         mainDListBuf += f"        MakeDynObj(D_NET, DYNOBJ_{name.upper()}_NET),\n"
-        mainDListBuf +=  "            SetType(2),\n" # root
+        mainDListBuf += "            SetType(2),\n"  # root
         # mainDListBuf +=  "            SetFlag(0x2),"
 
         # TODO: get the main shape name somehow
         self.enums.append("DYNOBJ_SHAPE_225_SHAPE")
         mainDListBuf += f"            SetShapePtr(DYNOBJ_SHAPE_225_SHAPE),\n"
-        mainDListBuf +=  "            SetScale(1.0, 1.0, 1.0),\n"
-        mainDListBuf +=  "            SetRotation(0.0, 0.0, 0.0),\n"
-        mainDListBuf +=  "            SetAttachOffset(0.0, 0.0, 0.0),\n"
-
+        mainDListBuf += "            SetScale(1.0, 1.0, 1.0),\n"
+        mainDListBuf += "            SetRotation(0.0, 0.0, 0.0),\n"
+        mainDListBuf += "            SetAttachOffset(0.0, 0.0, 0.0),\n"
 
         # TODO: for EACH shape, make dynobj and then attachedjoints
         for obj in bpy.data.objects:
@@ -233,18 +242,20 @@ class Exporter():
                     SetRotation(0.0, 0.0, 0.0),
                     SetAttachOffset({loc[0]}, {loc[1]}, {loc[2]}),
 """
-                skins = [name for skinName in self.skinWeights if obj.name.upper() in name]
+                skins = [
+                    name for skinName in self.skinWeights if obj.name.upper() in name
+                ]
                 for skin in skins:
                     mainDListBuf += self.skinWeights[skin]
 
         for animator in self.animGroups:
             mainDListBuf += animator
 
-        mainDListBuf +=  "    EndGroup(0x1),\n"
-        mainDListBuf +=  "    UseObj(0x1),\n"
-        mainDListBuf +=  "    UseIntegerNames(FALSE),\n"
-        mainDListBuf +=  "    EndList(),\n"
-        mainDListBuf +=  "};\n"
+        mainDListBuf += "    EndGroup(0x1),\n"
+        mainDListBuf += "    UseObj(0x1),\n"
+        mainDListBuf += "    UseIntegerNames(FALSE),\n"
+        mainDListBuf += "    EndList(),\n"
+        mainDListBuf += "};\n"
 
         return mainDListBuf
 
@@ -267,14 +278,16 @@ class Exporter():
         if myVertexGroup is None:
             # Nothing to skin
             return ("", "", "")
-        
-        self.enums.append(f"DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}_SKIN_NET")
+
+        self.enums.append(
+            f"DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}_SKIN_NET"
+        )
         self.enums.append(f"DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}")
-        self.enums.append(f'DYNOBJ_{myShape.name.upper()}_NET')
+        self.enums.append(f"DYNOBJ_{myShape.name.upper()}_NET")
 
         rot = vec_rad2deg(joint.rotation_euler)
         pos = joint.location
-        skinBuffer =  f"    MakeNetWithSubGroup(DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}_SKIN_NET),\n"
+        skinBuffer = f"    MakeNetWithSubGroup(DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}_SKIN_NET),\n"
         skinBuffer += f"        AttachTo(0xd, DYNOBJ_{myShape.name.upper()}_NET),\n"
         skinBuffer += f"        SetSkinShape(DYNOBJ_{myShape.name.upper()}_SHAPE),\n"
         skinBuffer += f"        SetScale(1.0, 1.0, 1.0),\n"
@@ -289,11 +302,16 @@ class Exporter():
         for idx, weight in get_weights(myShape, myVertexGroup):
             if weight != 0.0:
                 weightcount += 1
-                skinBuffer += f"                SetSkinWeight({idx}, {weight * 100.0}),\n"
+                skinBuffer += (
+                    f"                SetSkinWeight({idx}, {weight * 100.0}),\n"
+                )
         skinBuffer += f"    EndNetWithSubGroup(DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}_SKIN_NET),\n"
 
-        return (f"DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}", f"DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}_SKIN_NET", skinBuffer)
-
+        return (
+            f"DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}",
+            f"DYNOBJ_{myShape.name.upper()}_{joint.name.upper()}_SKIN_NET",
+            skinBuffer,
+        )
 
     def export(self, armature):
         self.armature = armature
@@ -362,11 +380,7 @@ class Exporter():
             self.file.write(t)
             self.file.write(s)
 
-
         self.file.write(mainDList)
-
-
 
     def closeFile(self):
         self.file.close()
-
