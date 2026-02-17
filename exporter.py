@@ -1,4 +1,3 @@
-from .commands import DLCmd
 from .node_types import *
 from .main import readDL
 from .Shape import Shape, constructShape, matGroups

@@ -1,5 +1,5 @@
 import struct
-from .commands import DLCmd
+from .commands import *
 
 fb = []
 
@@ -38,7 +38,7 @@ def readDL(offset) -> list[Command]:
     print("Reading DL...")
     cmdList = [readCMD(offset)]
     offset += 24
-    while cmdList[-1].type != DLCmd.EndList:
+    while cmdList[-1].type != int(EndList()):
         cmdList.append(readCMD(offset))
         offset += 24
     return cmdList

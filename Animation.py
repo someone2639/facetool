@@ -45,8 +45,8 @@ animLookup = {
 }
 
 
-def makeAction(action):
-    action_name = f"FaceAction_{action}"
+def makeAction(action_id: int):
+    action_name: str = f"FaceAction_{action_id}"
     action = bpy.data.actions.get(action_name)
     if not action:
         action = bpy.data.actions.new(name=action_name)
