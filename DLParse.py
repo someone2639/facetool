@@ -116,11 +116,10 @@ def parseDL(cmdList):
 
     for cmd in cmdList:
         match cmd.type:
-            case CallList():
-                print(":acall")
+            case DLCmd.CallList:
                 tmpList = readDL(cmd.arg1)
                 parseDL(tmpList)
-            case int(MakeDynObj()):
+            case DLCmd.MakeDynObj:
                 curObjType = cmd.arg2
                 curObjName = cmd.arg1
                 match curObjType:
@@ -155,31 +154,31 @@ def parseDL(cmdList):
                         pass
                     case DNode.D_MATERIAL:
                         matGroups[curMatGroup].append((GMaterial()))
-            case int(LinkWithPtr()):
+            case DLCmd.LinkWithPtr:
                 dataGrpMap[curObjName].append(cmd.arg1)
-            case int(SetType()):
+            case DLCmd.SetType:
                 # Type 2 is a root net?
                 # type 3 is a sub net?
                 netMap[curObjName].type = cmd.arg2
-            case int(SetNodeGroup()):
+            case DLCmd.SetNodeGroup:
                 if curObjType == DNode.D_SHAPE:
                     shapeMap[curObjName].verts = dataGrpMap[cmd.arg1][0]
                 elif curObjType == DNode.D_ANIMATOR:
                     animMap[curObjName] = dataGrpMap[cmd.arg1][0]
-            case int(SetPlaneGroup()):
+            case DLCmd.SetPlaneGroup:
                 if curObjType == DNode.D_SHAPE:
                     shapeMap[curObjName].faces = dataGrpMap[cmd.arg1][0]
-            case int(SetMaterialGroup()):
+            case DLCmd.SetMaterialGroup:
                 if curObjType == DNode.D_SHAPE:
                     shapeMap[curObjName].materials = cmd.arg1
-            case int(EndList()):
+            case DLCmd.EndList:
                 pass
-            case int(SetScale()):
+            case DLCmd.SetScale:
                 # dont have to impl on the importer since always [1,1,1]
                 pass
-            case int(SetRotation()):
+            case DLCmd.SetRotation:
                 jointMap[curObjName].rotation = cmd.vec
-            case int(SetAttachOffset()):
+            case DLCmd.SetAttachOffset:
                 if jointMap[curObjName].parent in jointMap:
                     parentpos = [
                         j for j in jointMap[jointMap[curObjName].parent].position
@@ -218,7 +217,7 @@ def parseDL(cmdList):
                         jointMap[curObjName].position,
                         jointMap[curObjName].rotation,
                     )
-            case int(AttachTo()):
+            case DLCmd.AttachTo:
                 if curObjType != DNode.D_ANIMATOR:
                     if subGroupName != 0:
                         print(f"Attaching subgroup {subGroupName} to {cmd.arg1}...")
@@ -248,7 +247,7 @@ def parseDL(cmdList):
                         mod = obj.modifiers.new("Armature_Root", "ARMATURE")
                         mod.object = bpy.data.objects["Root_Animator_1001"]
                         mod.vertex_group = f"Joint_{cmd.arg1}"
-            case int(LinkWith()):
+            case DLCmd.LinkWith:
                 boneID = cmd.arg1
                 if boneID == 221:
                     boneID = 1001
@@ -259,15 +258,15 @@ def parseDL(cmdList):
                 else:
                     parseAnimation([0, 0, 0], boneID, animMap[curObjName])
                 objectmode()
-            case int(MakeNetWithSubGroup()):
+            case DLCmd.MakeNetWithSubGroup:
                 iAM_MODIFYING_THE_SUBGROUP = True
                 subGroupName = cmd.arg1
                 jointMap[subGroupName] = Joint(subGroupName)
                 jointMap[subGroupName].bone = addBone(f"Joint_{subGroupName}", True)
-            case int(EndNetWithSubGroup()):
+            case DLCmd.EndNetWithSubGroup:
                 subGroupName = 0
                 curSkinShape = 0
-            case int(MakeAttachedJoint()):
+            case DLCmd.MakeAttachedJoint:
                 if (
                     iAM_MODIFYING_THE_SUBGROUP
                 ):  # Only 1 joint can be in a subgroup at a time?
@@ -290,7 +289,7 @@ def parseDL(cmdList):
                 jointMap[curObjName].bone = addBone(f"Joint_{curObjName}", False)
                 parent_bone(curObjName, subGroupName)
                 jointMap[curObjName].parent = subGroupName
-            case int(SetShapePtr()):
+            case DLCmd.SetShapePtr:
                 if cmd.arg1 in shapeMap:
                     constructShape(cmd.arg1, shapeMap[cmd.arg1])
                     o = bpy.data.objects[f"Shape_{cmd.arg1}"]
@@ -303,7 +302,7 @@ def parseDL(cmdList):
                     mod.vertex_group = "Joint_1001"
                 if curObjType == DNode.D_NET:
                     netMap[curObjName].shape = f"Shape_{cmd.arg1}"
-            case int(SetSkinShape()):
+            case DLCmd.SetSkinShape:
                 curSkinShape = cmd.arg1
                 o = bpy.data.objects[f"Shape_{curSkinShape}"]
 
@@ -320,26 +319,26 @@ def parseDL(cmdList):
                         g.weight = 0.0
                 mod.vertex_group = f"Joint_{curObjName}"
                 objectmode()
-            case int(SetSkinWeight()):
+            case DLCmd.SetSkinWeight:
                 # Add this weight to the vertex group
                 group = vtxGroups[curSkinShape]
                 group.add([cmd.arg2], cmd.vec[0] / 100.0, "REPLACE")
-            case int(StartGroup()):
+            case DLCmd.StartGroup:
                 if cmd.arg1 != 1000 and cmd.arg1 != 1:
                     curMatGroup = cmd.arg1
                     matGroups[curMatGroup] = []
-            case int(SetId()):
+            case DLCmd.SetId:
                 if curObjType == DNode.D_MATERIAL:
                     matGroups[curMatGroup][-1].matId = cmd.arg1
-            case int(SetAmbient()):
+            case DLCmd.SetAmbient:
                 if curObjType == DNode.D_MATERIAL:
                     matGroups[curMatGroup][-1].ambient = cmd.vec + [1.0]
-            case int(SetDiffuse()):
+            case DLCmd.SetDiffuse:
                 if curObjType == DNode.D_MATERIAL:
                     matGroups[curMatGroup][-1].diffuse = cmd.vec + [1.0]
-            # case int(SetTexturePath()):
+            # case DLCmd.SetTexturePath:
             #     matGroups[curMatGroup][-1].matId = cmd.arg1
-            case int(EndGroup()):
+            case DLCmd.EndGroup:
                 curMatGroup = 0
             case _:
                 pass
