@@ -2,7 +2,7 @@ from .main import readStruct
 import bpy
 import bmesh
 from .GMaterial import matGroups
-from .utils import coord_space_correction
+from .utils import position_coord_space_correction
 
 
 class Shape:
@@ -27,7 +27,7 @@ def readVerts(offset, count):
     ret = []
     for i in range(count):
         v = readStruct(">hhh", offset)
-        ret.append(v)
+        ret.append(position_coord_space_correction(v))
         offset += 6
     return ret
 

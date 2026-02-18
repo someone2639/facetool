@@ -14,9 +14,9 @@ from .utils import (
     editmode,
     posemode,
     objectmode,
-    coord_space_correction,
     vec_deg2rad,
     vec_rad2deg,
+    JOINT_ROTATION_MODE,
 )
 
 dataGrpMap = {}
@@ -55,7 +55,7 @@ def addBone(name: str, orient: bool):
     objectmode()
     if orient:
         posemode(armature)
-        bpy.data.objects["Root_Animator_1001"].pose.bones[name].rotation_mode = "XYZ"
+        bpy.data.objects["Root_Animator_1001"].pose.bones[name].rotation_mode = JOINT_ROTATION_MODE
         objectmode()
     return new_bone
 
@@ -81,7 +81,7 @@ def position_bone(boneName, position, rotation_deg):
     R = Matrix.LocRotScale(
         position,
         None,
-        # Euler(vec_deg2rad(rotation_deg), "XYZ"),
+        # Euler(vec_deg2rad(rotation_deg), JOINT_ROTATION_MODE),
         None,
     )
 
@@ -147,6 +147,8 @@ def parseDL(cmdList):
                         obj.location[0] = 0
                         obj.location[1] = 0
                         obj.location[2] = 0
+                        # obj.rotation_euler[0] = math.pi / 2
+                        # obj.rotation_euler[2] = math.pi
                         obj.parent = bpy.data.objects["Root_Animator_1001"]
                     case DNode.D_ANIMATOR:
                         pass
@@ -190,7 +192,7 @@ def parseDL(cmdList):
                 if iAM_MODIFYING_THE_SUBGROUP:
                     # subgrot = Matrix.LocRotScale(
                     #     jointMap[subGroupName].position,
-                    #     Euler(vec_deg2rad(jointMap[subGroupName].rotation), "XYZ"),
+                    #     Euler(vec_deg2rad(jointMap[subGroupName].rotation), JOINT_ROTATION_MODE),
                     #     None
                     # )
 
@@ -232,7 +234,7 @@ def parseDL(cmdList):
                         jointToCopy = jointMap[cmd.arg1]
                         print(f"Setting {curObjName} to {jointToCopy.position}")
 
-                        obj.rotation_euler = Euler(jointToCopy.rotation, "XYZ")
+                        obj.rotation_euler = Euler(jointToCopy.rotation, JOINT_ROTATION_MODE)
                         if jointToCopy.name != 221:
                             # Don't set a net to -20010
                             obj.location = jointToCopy.position

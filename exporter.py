@@ -16,7 +16,6 @@ from .utils import (
     objectmode,
     getFrameInterval,
     vec_rad2deg,
-    coord_space_correction,
     get_weights,
 )
 
@@ -51,11 +50,12 @@ class Exporter:
 """)
 
     def getShapeOutput(self, mesh, name):
+        vtxScale = 100
         # export vertices
         vertBuffer = f"static s16 verts_{name}[][3] = {{"
 
         for i, vtx in enumerate(mesh.vertices):
-            vertBuffer += f"{{ {vtx.co[0]}, {vtx.co[1]}, {vtx.co[2]} }}, "
+            vertBuffer += f"{{ {int(vtxScale * vtx.co[0])}, {int(vtxScale * vtx.co[1])}, {int(vtxScale * vtx.co[2])} }}, "
         vertBuffer += f"}};\n"
         vertBuffer += f"static struct GdVtxData vtx_{name} = {{ ARRAY_COUNT(verts_{name}), 1, verts_{name}}};\n"
 

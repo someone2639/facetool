@@ -8,7 +8,7 @@ from .utils import (
     editmode,
     posemode,
     objectmode,
-    coord_space_correction,
+    rotation_coord_space_correction,
     vec_deg2rad,
     JOINT_ROTATION_MODE,
     angle_wrap_deg,
@@ -53,7 +53,7 @@ def makeAction(action):
 
 
 def set_local_rotation(obj, value):
-    rot = Euler(value, "XYZ")
+    rot = Euler(value, JOINT_ROTATION_MODE)
     obj.rotation_euler = (obj.rotation_euler.to_matrix() @ rot.to_matrix()).to_euler(
         obj.rotation_mode
     )
@@ -96,7 +96,7 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
         objectmode()
     for frame, (rot, pos) in enumerate(rotposzip(rotation, position)):
         if rot:
-            cur_rotation = [angle / 10.0 for angle in rot]
+            cur_rotation = [angle / 10.0 for angle in rotation_coord_space_correction(rot)]
 
             # cur_rotation[2] *= -1
 
@@ -106,15 +106,13 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
             cur_rotation[0] -= base_rotation[0]
             cur_rotation[1] -= base_rotation[1]
             cur_rotation[2] -= base_rotation[2]
-            # if boneID != 1001:
-            # # TODO: rotation/2 seems to be correct, except when mario spins
-            # else:
 
             # Assume angles are between -180,180
-            angle_wrap_deg(cur_rotation, 180.0)
+            # TODO: rotation/2 seems to be correct, except when mario spins
             cur_rotation[0] /= 2.0
             cur_rotation[1] /= 2.0
             cur_rotation[2] /= 2.0
+            angle_wrap_deg(cur_rotation, 180.0)
 
 
             cur_rotation_rad = Euler(vec_deg2rad(cur_rotation), JOINT_ROTATION_MODE)
@@ -153,15 +151,15 @@ def parseAnimation(baseRot, jointID, offset):
             structLookup = animLookup[a_type]
             if a_type == GDAnimType.ROT3S:
                 animRot.append(
-                    choose_coord_space(jointID, readStruct(structLookup, a_offset))
+                    rotation_coord_space_correction(readStruct(structLookup, a_offset))
                 )
                 a_offset += 6
             elif a_type == GDAnimType.POS3S:
-                animPos.append(choose_coord_space(jointID, readStruct(structLookup, a_offset)))
+                animPos.append(readStruct(structLookup, a_offset))
                 a_offset += 6
             elif a_type == GDAnimType.ROT3S_POS3S:
                 vals = readStruct(structLookup, a_offset)
-                animRot.append(choose_coord_space(jointID, vals[0:3]))
+                animRot.append(rotation_coord_space_correction(vals[0:3]))
                 animPos.append(vals[3:6])
                 a_offset += 12
-        LinkAnimation(choose_coord_space(jointID, baseRot), jointID, i, animRot, animPos)
+        LinkAnimation(baseRot, jointID, i, animRot, animPos)
