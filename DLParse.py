@@ -55,7 +55,9 @@ def addBone(name: str, orient: bool):
     objectmode()
     if orient:
         posemode(armature)
-        bpy.data.objects["Root_Animator_1001"].pose.bones[name].rotation_mode = JOINT_ROTATION_MODE
+        bpy.data.objects["Root_Animator_1001"].pose.bones[
+            name
+        ].rotation_mode = JOINT_ROTATION_MODE
         objectmode()
     return new_bone
 
@@ -234,7 +236,9 @@ def parseDL(cmdList):
                         jointToCopy = jointMap[cmd.arg1]
                         print(f"Setting {curObjName} to {jointToCopy.position}")
 
-                        obj.rotation_euler = Euler(jointToCopy.rotation, JOINT_ROTATION_MODE)
+                        obj.rotation_euler = Euler(
+                            jointToCopy.rotation, JOINT_ROTATION_MODE
+                        )
                         if jointToCopy.name != 221:
                             # Don't set a net to -20010
                             obj.location = jointToCopy.position

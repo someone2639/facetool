@@ -65,6 +65,7 @@ def choose_coord_space(boneID: int, vec: list[float]) -> list[float]:
     else:
         return coord_space_correction(vec)
 
+
 def LinkAnimation(baserot, boneID, action, rotation, position):
     action_name = f"FaceAction_{action}"
     action = bpy.data.actions.get(action_name)
@@ -96,7 +97,9 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
         objectmode()
     for frame, (rot, pos) in enumerate(rotposzip(rotation, position)):
         if rot:
-            cur_rotation = [angle / 10.0 for angle in rotation_coord_space_correction(rot)]
+            cur_rotation = [
+                angle / 10.0 for angle in rotation_coord_space_correction(rot)
+            ]
 
             # cur_rotation[2] *= -1
 
@@ -112,8 +115,7 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
             cur_rotation[0] /= 2.0
             cur_rotation[1] /= 2.0
             cur_rotation[2] /= 2.0
-            angle_wrap_deg(cur_rotation, 180.0)
-
+            angle_wrap_deg(cur_rotation, 360.0)
 
             cur_rotation_rad = Euler(vec_deg2rad(cur_rotation), JOINT_ROTATION_MODE)
 
@@ -127,6 +129,7 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
         #     bone.location = (0, 0, 0)
         #     bone.keyframe_insert(data_path="location", frame=frame, index=-1)
     objectmode()
+
 
 # Anim data format:
 #  s32 count (-1 if done, 0 if empty)

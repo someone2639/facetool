@@ -52,12 +52,14 @@ sys.dont_write_bytecode = True
 
 class FaceProperties(PropertyGroup):
     gd_bin_file: StringProperty(
-        name="Path to gd.bin",
-        description="This file has all the face data to import.",
-        subtype="FILE_NAME",
+        name="Work Folder",
+        description="example: src/goddard/dynlists/",
+        subtype="FOLDER_NAME",
     )
     gd_out_file: StringProperty(
-        name="Output C file", description="Where should this go?", subtype="FILE_NAME"
+        name="Face DL Name",
+        description="the name of the face DynList",
+        default="dynlist_mario_master",
     )
 
 
