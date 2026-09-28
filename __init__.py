@@ -38,7 +38,7 @@ from bpy.utils import register_class, unregister_class
 from bpy.path import abspath
 from bpy.props import StringProperty, PointerProperty, BoolProperty
 
-from .main import readDL, readFile
+from .main import readDL, readDynLists
 from .DLParse import parseDL, addRootAnimator
 from .exporter import Exporter
 
@@ -51,12 +51,12 @@ sys.dont_write_bytecode = True
 
 
 class FaceProperties(PropertyGroup):
-    gd_bin_file: StringProperty(
+    gd_work_dir: StringProperty(
         name="Work Folder",
         description="example: src/goddard/dynlists/",
-        subtype="FOLDER_NAME",
+        subtype="DIR_PATH",
     )
-    gd_out_file: StringProperty(
+    gd_face_name: StringProperty(
         name="Face DL Name",
         description="the name of the face DynList",
         default="dynlist_mario_master",
@@ -75,13 +75,14 @@ class ImportFaceButton(Operator):
         return context.mode == "OBJECT"
 
     def execute(self, context):
-        input_file = bpy.path.abspath(context.scene.face_props.gd_bin_file)
-        if input_file and os.path.isfile(input_file):
+        workdir = bpy.path.abspath(context.scene.face_props.gd_work_dir)
+        face_name = bpy.path.abspath(context.scene.face_props.gd_face_name)
+        if workdir and os.path.isdir(workdir):
             addRootAnimator()
-            readFile(input_file)
-            cmdList = readDL(0)
-            parseDL(cmdList)
-            bpy.context.scene.frame_end = 820
+            readDynLists(workdir)
+            # cmdList = readDL(face_name)
+            # endFrame = parseDL(cmdList)
+            # bpy.context.scene.frame_end = endFrame
             return {"FINISHED"}
         else:
             self.report({"ERROR"}, "No import file specified!")
@@ -112,20 +113,20 @@ class ExportFaceButton(Operator):
             )
             return {"CANCELLED"}
 
-        output_file = bpy.path.abspath(context.scene.face_props.gd_out_file)
+        # output_file = bpy.path.abspath(context.scene.face_props.gd_face_name)
 
-        if output_file and os.path.isfile(output_file):
-            pass
-        else:
-            self.report({"ERROR"}, "No Output file specified!")
-            return {"CANCELLED"}
+        # if output_file and os.path.isfile(output_file):
+        #     pass
+        # else:
+        #     self.report({"ERROR"}, "No Output file specified!")
+        #     return {"CANCELLED"}
 
-        exp = Exporter(output_file)
+        # exp = Exporter(output_file)
 
-        for armature in armatureList:
-            exp.export(armature)
+        # for armature in armatureList:
+        #     exp.export(armature)
 
-        exp.closeFile()
+        # exp.closeFile()
 
         return {"FINISHED"}
 
@@ -140,9 +141,9 @@ class PANEL_PT_GoddardSidebar(Panel):
         scene = context.scene
         faceprops = scene.face_props
         col = self.layout.column(align=True)
-        col.prop(faceprops, "gd_bin_file")
+        col.prop(faceprops, "gd_work_dir")
+        col.prop(faceprops, "gd_face_name")
         prop = col.operator(ImportFaceButton.bl_idname, text="Import Mario Face")
-        col.prop(faceprops, "gd_out_file")
         prop = col.operator(ExportFaceButton.bl_idname, text="Export Mario Face")
 
 

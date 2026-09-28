@@ -91,7 +91,7 @@ def position_bone(boneName, position, rotation_deg):
     objectmode()
 
 
-def parseDL(cmdList):
+def parseDL(cmdList) -> int:
     global objMap
     global shapeMap
     global dataGrpMap
@@ -346,5 +346,6 @@ def parseDL(cmdList):
                 curMatGroup = 0
             case _:
                 pass
+    return 820
     # if 221 in objMap:
     #     objMap[221].rotation_euler = (math.radians(90), 0, 0)
