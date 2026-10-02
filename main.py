@@ -3,9 +3,9 @@ import re
 import struct
 
 if __name__ != "__main__":
-    from .commands import DLCmd, CommandToDLCmd
+    from .commands import DLCmd, CommandToDLCmd, CommandToArguments
 else:
-    from commands import DLCmd, CommandToDLCmd
+    from commands import DLCmd, CommandToDLCmd, CommandToArguments
 
 dynlists = {}
 vtxdatas = {}
@@ -35,11 +35,28 @@ def findEndLine(data: list[str], startline: int) -> int:
     return -1
 
 class Command:
-    def __init__(self, cmdname: DLCmd, arg1: int, arg2: int, vec: list[float]):
+    def __init__(self, cmdname: DLCmd, arg1, arg2, vec: list[float]):
         self.type = cmdname
         self.arg1 = arg1
         self.arg2 = arg2
         self.vec = vec
+
+    def __init__(self, cmdname: DLCmd, argspec: dict[str, bool], args: list[str] = None):
+        self.type = cmdname
+        self.arg1 = 0
+        self.arg2 = 0
+        self.vec = [0,0,0]
+        if "vec" in argspec:
+            baseIdx = argspec["vec"]
+            self.vec = [float(args[baseIdx]), float(args[baseIdx + 1]), float(args[baseIdx + 2])]
+        if "float1" in argspec:
+            self.vec = [args[argspec["float1"]], 0, 0]
+        if "arg1" in argspec:
+            self.vec = args[argspec["arg1"]]
+        if "arg2" in argspec:
+            self.arg2 = args[argspec["arg2"]]
+
+
 
     def __str__(self):
         return f"cmd {self.type}: ({self.arg1}, {self.arg2}) {self.vec}"
@@ -52,9 +69,11 @@ def parseDynlist(data: list[str], startline: int) -> list[Command]:
 
     for cmd in cmd_list:
         tokens = cmd.replace("(", " ").replace(")", " ").replace(",", " ").split()
-        print(tokens)
         if len(tokens) > 0 and tokens[0] in CommandToDLCmd.keys():
-            ret_commands.append(Command(CommandToDLCmd[tokens[0]], 0, 0, [0, 0, 0]))
+            cmdname = tokens[0]
+            cmdtype = CommandToDLCmd[cmdname]
+            cmdargs = CommandToArguments[cmdname]
+            ret_commands.append(Command(cmdtype, cmdargs, tokens[1:]))
 
     return ret_commands
 
