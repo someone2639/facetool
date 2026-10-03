@@ -4,8 +4,10 @@ import struct
 
 if __name__ != "__main__":
     from .commands import CommandToArguments, CommandToDLCmd, DLCmd
+    from .Face import Face
 else:
     from commands import CommandToArguments, CommandToDLCmd, DLCmd
+    from Face import Face
 
 dynlists = {}
 vtxdatas = {}
@@ -22,9 +24,11 @@ regexes: dict[str, str] = {
     r"s16\sanimdata_(\w+)\[\]\[(\d+)\]": "animdata",
     r"struct\sAnimDataInfo\sanim_(\w+)": "animinfo",
     r"s16\sverts_(\w+)\[\]\[(\d+)\]": "vtxdata",
-    r"struct\sGdVtxData\svtx_(\w+)": "vtxinfo",
+    r"s16\s(\w+)_VtxData\[\]\[(\d+)\]": "vtxdata2",
+    r"struct\sGdVtxData\s(\w+)": "vtxinfo",
     r"u16\sfacedata_(\w+)\[\]\[(\d+)\]": "facedata",
-    r"struct\sGdFaceData\sfaces_(\w+)": "faceinfo",
+    r"u16\s(\w+)_FaceData\[\]\[(\d+)\]": "facedata2",
+    r"struct\sGdFaceData\s(\w+)": "faceinfo",
     r"struct\sDynList\s(\w+)\[": "dynlist",
 }
 
@@ -50,9 +54,9 @@ class Command:
             baseIdx = argspec["vec"]
             self.vec = [float(args[baseIdx]), float(args[baseIdx + 1]), float(args[baseIdx + 2])]
         if "float1" in argspec:
-            self.vec = [args[argspec["float1"]], 0, 0]
+            self.vec = [float(args[argspec["float1"]]), 0, 0]
         if "arg1" in argspec:
-            self.vec = args[argspec["arg1"]]
+            self.arg1 = args[argspec["arg1"]]
         if "arg2" in argspec:
             self.arg2 = args[argspec["arg2"]]
 
@@ -81,9 +85,9 @@ def parseData(data: list[str], startline: int, datawidth: int) -> list[list[floa
     retvalues = []
 
     for parsedline in data[startline:findEndLine(data, startline)]:
-        values = (
+        values = [int(i) for i in 
             parsedline.replace(",", " ").replace("{", " ").replace("}", " ").split()
-        )
+        ]
         retvalues += [
             values[i : i + datawidth] for i in range(0, len(values), datawidth)
         ]
@@ -126,19 +130,34 @@ def parseAllDynLists():
 
                     match regexes[reg]:
                         case "vtxinfo":
-                            vtxinfos[f"vtx_{params[0]}"] = parseInfo(file, i, 1)[0]
+                            vtxinfos[params[0]] = parseInfo(file, i, 1)[0]
+                            # if len(vtxinfos[params[0]]) > 1:
+                            #     vtxinfos[params[0]] = vtxinfos[params[0]][0]
                         case "faceinfo":
-                            faceinfos[f"faces_{params[0]}"] = parseInfo(file, i, 1)[0]
+                            faceinfos[params[0]] = parseInfo(file, i, 1)[0]
                         case "animinfo":
                             animinfos[f"anim_{params[0]}"] = parseAnimInfo(file, i)
                         case "vtxdata":
-                            vtxdatas[f"verts_{params[0]}"] = parseData(file, i, 3)
+                            vtxdatas[f"verts_{params[0]}"] = parseData(file, i + 1, 3)
+                        case "vtxdata2":
+                            vtxdatas[f"{params[0]}_VtxData"] = parseData(file, i + 1, 3)
                         case "facedata":
-                            facedatas[f"facedata_{params[0]}"] = parseData(file, i, 4)
+                            facedatas[f"facedata_{params[0]}"] = parseData(file, i + 1, 4)
+                        case "facedata2":
+                            facedatas[f"{params[0]}_FaceData"] = parseData(file, i + 1, 4)
                         case "animdata":
-                            animdatas[f"animdata_{params[0]}"] = parseData(file, i, int(params[1]))
+                            animdatas[f"animdata_{params[0]}"] = parseData(file, i + 1, int(params[1]))
                         case "dynlist":
                             dynlists[params[0]] = parseDynlist(file, i)
+    return Face(
+        dynlists,
+        vtxdatas,
+        facedatas,
+        animdatas,
+        vtxinfos,
+        faceinfos,
+        animinfos
+    )
 
 
 def readDynLists(folder_path: str):
@@ -178,4 +197,3 @@ if __name__ == "__main__":
 
     readDynLists(sys.argv[1])
     parseAllDynLists()
-    print(dynlists)

@@ -61,16 +61,17 @@ def readFaces(offset, count):
     return (retFaces, retMats)
 
 
-def constructShape(oId, shape):
-    (v_count, flag, v_offset) = readStruct(">LLL", shape.verts)
-    (f_count, flag, f_offset) = readStruct(">LLL", shape.faces)
-
-    vertices = readVerts(v_offset, v_count)
-    faces, matIndices = readFaces(f_offset, f_count)
-
+def constructShape(face, oId, shape):
     mesh = bpy.data.meshes[f"Shape_{oId}_mesh"]
-    mesh.from_pydata(vertices, [], faces)
+    print(f"before meshing {oId}")
+    mesh.from_pydata(
+        face.vtxdatas[face.vtxinfos[shape.verts][0]],
+        [],
+        [i[1:4] for i in face.facedatas[face.faceinfos[shape.faces][0]]]
+    )
+    print(f"after meshing {oId}")
     registerMats(bpy.data.objects[f"Shape_{oId}"], shape.materials)
+    matIndices = [i[0] for i in face.facedatas[face.faceinfos[shape.faces][0]]]
     for i, f in enumerate(mesh.polygons):
         f.material_index = matIndices[i]
         f.use_smooth = True

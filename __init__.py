@@ -41,6 +41,7 @@ from bpy.props import StringProperty, PointerProperty, BoolProperty
 from .main import readDL, readDynLists, parseAllDynLists
 from .DLParse import parseDL, addRootAnimator
 from .exporter import Exporter
+from .Face import Face
 
 from bpy.types import Operator
 from bpy.types import Panel, PropertyGroup
@@ -54,6 +55,7 @@ class FaceProperties(PropertyGroup):
     gd_work_dir: StringProperty(
         name="Work Folder",
         description="example: src/goddard/dynlists/",
+        default="/home/faris/Decomps/HackerSM64/src/goddard/dynlists/",
         subtype="DIR_PATH",
     )
     gd_face_name: StringProperty(
@@ -80,9 +82,9 @@ class ImportFaceButton(Operator):
         if workdir and os.path.isdir(workdir):
             addRootAnimator()
             readDynLists(workdir)
-            # cmdList = readDL(face_name)
-            # endFrame = parseDL(cmdList)
-            # bpy.context.scene.frame_end = endFrame
+            face = parseAllDynLists()
+            end_frame = parseDL(face, face_name)
+            bpy.context.scene.frame_end = end_frame
             return {"FINISHED"}
         else:
             self.report({"ERROR"}, "No import file specified!")
