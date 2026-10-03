@@ -3,9 +3,9 @@ import re
 import struct
 
 if __name__ != "__main__":
-    from .commands import DLCmd, CommandToDLCmd, CommandToArguments
+    from .commands import CommandToArguments, CommandToDLCmd, DLCmd
 else:
-    from commands import DLCmd, CommandToDLCmd, CommandToArguments
+    from commands import CommandToArguments, CommandToDLCmd, DLCmd
 
 dynlists = {}
 vtxdatas = {}
@@ -90,30 +90,55 @@ def parseData(data: list[str], startline: int, datawidth: int) -> list[list[floa
 
     return retvalues
 
+def parseInfo(data: list[str], startline: int, num_lines: int):
+    datapattern = r"ARRAY_COUNT\((\w+)\),\s(\w+),\s(\w+)"
+    retinfo = []
+
+    for i in range(num_lines):
+        match = re.search(datapattern, data[startline + i])
+        if match:
+            retinfo += [match.groups()]
+    return retinfo
+
+def parseAnimInfo(data: list[str], startline: int):
+    datapattern = r"ARRAY_COUNT\((\w+)\),\s(\w+),\s(\w+)"
+    datapattern2 = r"0,\sGD_ANIM_EMPTY,\sNULL"
+    retinfo = []
+    num_lines = findEndLine(data, startline) - startline
+
+    for i in range(num_lines):
+        match = re.search(datapattern, data[startline + i])
+        if match:
+            retinfo += [match.groups()]
+        match = re.search(datapattern2, data[startline + i])
+        if match:
+            retinfo += [["0", "GD_ANIM_EMPTY", "NULL"]]
+    return retinfo
+
 def parseAllDynLists():
-    for filename in fbl.keys():
+    for filename in fbl:
         file = fbl[filename]
         for i, line in enumerate(file):
-            for reg in regexes.keys():
+            for reg in regexes:
                 match = re.search(reg, line)
                 if match:
                     params = match.groups()
 
                     match regexes[reg]:
                         case "vtxinfo":
-                            datapattern = r"ARRAY_COUNT\((\w+)\),\s(\w+),\s(\w+)"
-                            match2 = re.search(datapattern, line)
-                            vtxinfos[f"vtx_{params[0]}"] = match2.groups()[0]
+                            vtxinfos[f"vtx_{params[0]}"] = parseInfo(file, i, 1)[0]
                         case "faceinfo":
-                            datapattern = r"ARRAY_COUNT\((\w+)\),\s(\w+),\s(\w+)"
-                            match2 = re.search(datapattern, line)
-                            faceinfos[f"faces_{params[0]}"] = match2.groups()[0]
+                            faceinfos[f"faces_{params[0]}"] = parseInfo(file, i, 1)[0]
+                        case "animinfo":
+                            animinfos[f"anim_{params[0]}"] = parseAnimInfo(file, i)
                         case "vtxdata":
-                            vtxdatas[f"verts_{params[0]}"] = parseData(file, i + 1, 3)
+                            vtxdatas[f"verts_{params[0]}"] = parseData(file, i, 3)
                         case "facedata":
-                            facedatas[f"facedata_{params[0]}"] = parseData(file, i + 1, 4)
+                            facedatas[f"facedata_{params[0]}"] = parseData(file, i, 4)
+                        case "animdata":
+                            animdatas[f"animdata_{params[0]}"] = parseData(file, i, int(params[1]))
                         case "dynlist":
-                            dynlists[params[0]] = parseDynlist(file, i + 1)
+                            dynlists[params[0]] = parseDynlist(file, i)
 
 
 def readDynLists(folder_path: str):

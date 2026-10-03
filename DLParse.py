@@ -91,7 +91,7 @@ def position_bone(boneName, position, rotation_deg):
     objectmode()
 
 
-def parseDL(cmdList) -> int:
+def parseDL(dynlists, ) -> int:
     global objMap
     global shapeMap
     global dataGrpMap

@@ -38,7 +38,7 @@ from bpy.utils import register_class, unregister_class
 from bpy.path import abspath
 from bpy.props import StringProperty, PointerProperty, BoolProperty
 
-from .main import readDL, readDynLists
+from .main import readDL, readDynLists, parseAllDynLists
 from .DLParse import parseDL, addRootAnimator
 from .exporter import Exporter
 
