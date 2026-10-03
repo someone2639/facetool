@@ -335,7 +335,7 @@ def parseDL(face: Face, name: str) -> int:
             case DLCmd.SetSkinWeight:
                 # Add this weight to the vertex group
                 group = vtxGroups[curSkinShape]
-                group.add([cmd.arg2], cmd.vec[0] / 100.0, "REPLACE")
+                group.add([int(cmd.arg2)], cmd.vec[0] / 100.0, "REPLACE")
             case DLCmd.StartGroup:
                 if cmd.arg1 != 1000 and cmd.arg1 != 1:
                     curMatGroup = cmd.arg1
