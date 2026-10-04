@@ -1,24 +1,21 @@
-from .commands import DLCmd
-from .node_types import *
-from .main import readDL, Command
-from .Face import Face
-from .Shape import Shape, constructShape, matGroups
-from .Joint import Joint
-from .Animation import parseAnimation
-from .Net import Net
-from .constants import ROOT_ANIMATOR_NAME, DYNOBJ_MARIO_MAIN_NET
-import bpy
-import math
-from mathutils import Euler, Vector, Matrix
 
+import bpy
+from mathutils import Euler, Matrix
+
+from .Animation import parseAnimation
+from .commands import DLCmd
+from .constants import DYNOBJ_MARIO_MAIN_NET, ROOT_ANIMATOR_NAME
+from .Face import Face
 from .GMaterial import GMaterial
+from .Joint import Joint
+from .Net import Net
+from .node_types import *
+from .Shape import Shape, constructShape, matGroups
 from .utils import (
-    editmode,
-    posemode,
-    objectmode,
-    vec_deg2rad,
-    vec_rad2deg,
     JOINT_ROTATION_MODE,
+    editmode,
+    objectmode,
+    posemode,
 )
 
 dataGrpMap = {}
@@ -63,7 +60,7 @@ def addBone(name: str, orient: bool):
     return new_bone
 
 
-def parent_bone(name: int, parent_name: int):
+def parent_bone(name: str, parent_name: str):
     armature = bpy.data.objects.get(f"Root_Animator_{ROOT_ANIMATOR_NAME}")
     editmode(armature)
     bone = armature.data.edit_bones.get(f"Joint_{name}")
@@ -157,7 +154,7 @@ def parseDL(face: Face, name: str) -> int:
                     case "D_ANIMATOR":
                         pass
                     case "D_MATERIAL":
-                        matGroups[curMatGroup].append((GMaterial()))
+                        matGroups[curMatGroup].append(GMaterial())
             case DLCmd.LinkWithPtr:
                 dataGrpMap[curObjName].append(cmd.arg1)
             case DLCmd.SetType:
