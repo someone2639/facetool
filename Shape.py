@@ -1,4 +1,3 @@
-from .main import readStruct
 import bpy
 import bmesh
 from .GMaterial import matGroups
@@ -21,17 +20,6 @@ def add_mesh(m, verts, faces, col_name="Collection"):
     bpy.context.view_layer.objects.active = obj
     mesh.from_pydata(verts, [], faces)
 
-
-def readVerts(offset, count):
-    print(f"Reading {count} vertices from {offset}")
-    ret = []
-    for i in range(count):
-        v = readStruct(">hhh", offset)
-        ret.append(position_coord_space_correction(v))
-        offset += 6
-    return ret
-
-
 def registerMats(obj, matID):
     mats = matGroups[matID]
 
@@ -48,18 +36,6 @@ def registerMats(obj, matID):
 
         obj.data.materials.append(new_mat)
         obj.active_material_index = len(obj.data.materials) - 1
-
-
-def readFaces(offset, count):
-    retFaces = []
-    retMats = []
-    for i in range(count):
-        v = readStruct(">hhhh", offset)
-        retFaces.append([v[1], v[2], v[3]])
-        retMats.append(v[0])
-        offset += 8
-    return (retFaces, retMats)
-
 
 def constructShape(face, oId, shape):
     mesh = bpy.data.meshes[f"Shape_{oId}_mesh"]

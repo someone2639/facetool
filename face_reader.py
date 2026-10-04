@@ -2,12 +2,8 @@ import os
 import re
 import struct
 
-if __name__ != "__main__":
-    from .commands import CommandToArguments, CommandToDLCmd, DLCmd
-    from .Face import Face
-else:
-    from commands import CommandToArguments, CommandToDLCmd, DLCmd
-    from Face import Face
+from .commands import CommandToArguments, CommandToDLCmd, DLCmd
+from .Face import Face
 
 dynlists = {}
 vtxdatas = {}
@@ -120,7 +116,7 @@ def parseAnimInfo(data: list[str], startline: int):
             retinfo += [["0", "GD_ANIM_EMPTY", "NULL"]]
     return retinfo
 
-def parseAllDynLists():
+def parseAllDynLists() -> Face:
     for filename in fbl:
         file = fbl[filename]
         for i, line in enumerate(file):
@@ -173,31 +169,3 @@ def readDynLists(folder_path: str):
 
             with open(f"{folder_path}/{file}", "r") as f:
                 fbl[file] = f.readlines()
-
-
-def readStruct(fmt, offset):
-    return struct.unpack_from(fmt, fb, offset)
-
-def readCMD(offset):
-    argvals = struct.unpack_from(">LLLfff", fb, offset)
-    return Command(
-        argvals[0], argvals[1], argvals[2], [argvals[3], argvals[4], argvals[5]]
-    )
-
-
-def readDL(name):
-    print("Reading DL...")
-    cmdList = dynlists[name]
-    name += 24
-    while cmdList[-1].type != DLCmd.EndList:
-        cmdList.append(readCMD(name))
-        name += 24
-    return cmdList
-
-
-if __name__ == "__main__":
-    import sys
-
-    readDynLists(sys.argv[1])
-    parseAllDynLists()
-    print(animdatas)

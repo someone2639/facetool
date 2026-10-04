@@ -1,7 +1,6 @@
 import bpy
 import math
 import mathutils
-from .main import readStruct
 from .constants import ROOT_ANIMATOR_NAME
 from itertools import zip_longest
 from mathutils import Euler, Matrix

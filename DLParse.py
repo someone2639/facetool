@@ -1,4 +1,3 @@
-
 import bpy
 from mathutils import Euler, Matrix
 
@@ -16,6 +15,7 @@ from .utils import (
     editmode,
     objectmode,
     posemode,
+    vec_deg2rad,
 )
 
 dataGrpMap = {}
@@ -23,6 +23,7 @@ shapeMap = {}
 vtxGroups = {}
 objMap = {}
 jointMap = {}
+
 
 def addRootAnimator():
     global objMap
@@ -150,7 +151,9 @@ def parseDL(face: Face, name: str) -> int:
                         obj.location[2] = 0
                         # obj.rotation_euler[0] = math.pi / 2
                         # obj.rotation_euler[2] = math.pi
-                        obj.parent = bpy.data.objects[f"Root_Animator_{ROOT_ANIMATOR_NAME}"]
+                        obj.parent = bpy.data.objects[
+                            f"Root_Animator_{ROOT_ANIMATOR_NAME}"
+                        ]
                     case "D_ANIMATOR":
                         pass
                     case "D_MATERIAL":
@@ -163,15 +166,19 @@ def parseDL(face: Face, name: str) -> int:
                 netMap[curObjName].type = cmd.arg2
             case DLCmd.SetNodeGroup:
                 if curObjType == "D_SHAPE":
-                    shapeMap[curObjName].verts = dataGrpMap[cmd.arg1][0].replace("&","")
+                    shapeMap[curObjName].verts = dataGrpMap[cmd.arg1][0].replace(
+                        "&", ""
+                    )
                 elif curObjType == "D_ANIMATOR":
-                    animMap[curObjName] = dataGrpMap[cmd.arg1][0].replace("&","")
+                    animMap[curObjName] = dataGrpMap[cmd.arg1][0].replace("&", "")
             case DLCmd.SetPlaneGroup:
                 if curObjType == "D_SHAPE":
-                    shapeMap[curObjName].faces = dataGrpMap[cmd.arg1][0].replace("&","")
+                    shapeMap[curObjName].faces = dataGrpMap[cmd.arg1][0].replace(
+                        "&", ""
+                    )
             case DLCmd.SetMaterialGroup:
                 if curObjType == "D_SHAPE":
-                    shapeMap[curObjName].materials = cmd.arg1.replace("&","")
+                    shapeMap[curObjName].materials = cmd.arg1.replace("&", "")
             case DLCmd.EndList:
                 pass
             case DLCmd.SetScale:
@@ -248,7 +255,9 @@ def parseDL(face: Face, name: str) -> int:
                         all_indices = [v.index for v in mesh.vertices]
                         rootgroup.add(all_indices, 1.0, "REPLACE")
                         mod = obj.modifiers.new("Armature_Root", "ARMATURE")
-                        mod.object = bpy.data.objects[f"Root_Animator_{ROOT_ANIMATOR_NAME}"]
+                        mod.object = bpy.data.objects[
+                            f"Root_Animator_{ROOT_ANIMATOR_NAME}"
+                        ]
                         mod.vertex_group = f"Joint_{cmd.arg1}"
             case DLCmd.LinkWith:
                 boneID = cmd.arg1
@@ -256,8 +265,7 @@ def parseDL(face: Face, name: str) -> int:
                     boneID = ROOT_ANIMATOR_NAME
                 if boneID in jointMap:
                     parseAnimation(
-                        face,
-                        jointMap[boneID].rotation, boneID, animMap[curObjName]
+                        face, jointMap[boneID].rotation, boneID, animMap[curObjName]
                     )
                 else:
                     parseAnimation(face, [0, 0, 0], boneID, animMap[curObjName])
@@ -298,7 +306,9 @@ def parseDL(face: Face, name: str) -> int:
                     constructShape(face, cmd.arg1, shapeMap[cmd.arg1])
                     o = bpy.data.objects[f"Shape_{cmd.arg1}"]
                     mesh = bpy.data.meshes[f"Shape_{cmd.arg1}_mesh"]
-                    rootgroup = objMap[cmd.arg1].vertex_groups.new(name=f"Joint_{ROOT_ANIMATOR_NAME}")
+                    rootgroup = objMap[cmd.arg1].vertex_groups.new(
+                        name=f"Joint_{ROOT_ANIMATOR_NAME}"
+                    )
                     all_indices = [v.index for v in mesh.vertices]
                     rootgroup.add(all_indices, 0.5, "REPLACE")
                     mod = o.modifiers.new("Armature_Root", "ARMATURE")

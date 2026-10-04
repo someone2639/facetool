@@ -1,6 +1,5 @@
 from .commands import DLCmd
 from .node_types import *
-from .main import readDL
 from .Shape import Shape, constructShape, matGroups
 from .Joint import Joint
 from .Animation import parseAnimation
