@@ -6,7 +6,7 @@ from .Shape import Shape, constructShape, matGroups
 from .Joint import Joint
 from .Animation import parseAnimation
 from .Net import Net
-from .constants import ROOT_ANIMATOR_NAME
+from .constants import ROOT_ANIMATOR_NAME, DYNOBJ_MARIO_MAIN_NET
 import bpy
 import math
 from mathutils import Euler, Vector, Matrix
@@ -118,7 +118,6 @@ def parseDL(face: Face, name: str) -> int:
     cmdList = face.dynlists[name]
 
     for cmd in cmdList:
-        print(f"    {cmd!r}")
         match cmd.type:
             case DLCmd.CallList:
                 parseDL(face, cmd.arg1)
@@ -242,7 +241,7 @@ def parseDL(face: Face, name: str) -> int:
                         obj.rotation_euler = Euler(
                             jointToCopy.rotation, JOINT_ROTATION_MODE
                         )
-                        if jointToCopy.name != 221:
+                        if jointToCopy.name != DYNOBJ_MARIO_MAIN_NET:
                             # Don't set a net to -20010
                             obj.location = jointToCopy.position
                         else:
@@ -256,7 +255,7 @@ def parseDL(face: Face, name: str) -> int:
                         mod.vertex_group = f"Joint_{cmd.arg1}"
             case DLCmd.LinkWith:
                 boneID = cmd.arg1
-                if boneID == 221:
+                if boneID == DYNOBJ_MARIO_MAIN_NET:
                     boneID = ROOT_ANIMATOR_NAME
                 if boneID in jointMap:
                     parseAnimation(
@@ -355,5 +354,5 @@ def parseDL(face: Face, name: str) -> int:
             case _:
                 pass
     return 820
-    # if 221 in objMap:
-    #     objMap[221].rotation_euler = (math.radians(90), 0, 0)
+    # if DYNOBJ_MARIO_MAIN_NET in objMap:
+    #     objMap[DYNOBJ_MARIO_MAIN_NET].rotation_euler = (math.radians(90), 0, 0)
