@@ -135,7 +135,7 @@ def parseDL(face: Face, name: str) -> int:
                         # Parent the animated bones to the root bone
                         if rootNet == 0:
                             rootNet = curObjName
-                            parent_bone(curObjName, {ROOT_ANIMATOR_NAME})
+                            parent_bone(curObjName, ROOT_ANIMATOR_NAME)
                             jointMap[curObjName].parent = 0
                     case "D_SHAPE":
                         shapeMap[curObjName] = Shape(curObjName, 0, 0, 0)
