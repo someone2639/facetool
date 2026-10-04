@@ -1,6 +1,7 @@
 import bpy
 import math
 import mathutils
+from .constants import ROOT_ANIMATOR_NAME
 
 from .utils import editmode, objectmode
 
@@ -20,7 +21,7 @@ class Joint:
 
 
 def addBone(j):
-    armature = bpy.data.objects.get("Root_Animator_1001")
+    armature = bpy.data.objects.get(f"Root_Animator_{ROOT_ANIMATOR_NAME}")
     editmode(armature)
     bpy.ops.armature.bone_primitive_add()
     new_bone = armature.data.edit_bones[-1]
@@ -34,7 +35,7 @@ def addBone(j):
 
 
 def position_bone(bone, position, rotation):
-    armature = bpy.data.objects.get("Root_Animator_1001")
+    armature = bpy.data.objects.get(f"Root_Animator_{ROOT_ANIMATOR_NAME}")
     editmode(armature)
     scale = (bone.tail - bone.head)[2]
     bone.head = tuple(position)
@@ -54,7 +55,7 @@ def position_bone(bone, position, rotation):
 
 
 def parent_bone(bone, to):
-    armature = bpy.data.objects.get("Root_Animator_1001")
+    armature = bpy.data.objects.get(f"Root_Animator_{ROOT_ANIMATOR_NAME}")
     editmode(armature)
     pbone = armature.data.edit_bones.get(f"Joint_{to}")
     if pbone:

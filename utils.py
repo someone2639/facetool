@@ -4,25 +4,14 @@ import math
 JOINT_ROTATION_MODE = "XYZ"
 
 
-def editmode(old_o):
-    hack = repr(old_o).replace("['"," ").replace("']", " ").split()[1]
-
-    bpy.ops.object.select_all(action='DESELECT')
-
-    o = bpy.data.objects[hack]
-
+def editmode(o):
     bpy.context.view_layer.objects.active = o
     o.select_set(True)
     if bpy.context.mode != "EDIT":
         bpy.ops.object.mode_set(mode="EDIT")
 
 
-def posemode(old_o):
-    hack = repr(old_o).replace("['"," ").replace("']", " ").split()[1]
-
-    bpy.ops.object.select_all(action='DESELECT')
-
-    o = bpy.data.objects[hack]
+def posemode(o):
     bpy.context.view_layer.objects.active = o
     o.select_set(True)
     if bpy.context.mode != "POSE":

@@ -6,6 +6,7 @@ from .Shape import Shape, constructShape, matGroups
 from .Joint import Joint
 from .Animation import parseAnimation
 from .Net import Net
+from .constants import ROOT_ANIMATOR_NAME
 import bpy
 import math
 from mathutils import Euler, Vector, Matrix
@@ -25,9 +26,6 @@ shapeMap = {}
 vtxGroups = {}
 objMap = {}
 jointMap = {}
-
-# ROOT_ANIMATOR_NAME = 1001
-ROOT_ANIMATOR_NAME = "DYNOBJ_MARIO_MAIN_ANIMATOR"
 
 def addRootAnimator():
     global objMap
@@ -259,13 +257,14 @@ def parseDL(face: Face, name: str) -> int:
             case DLCmd.LinkWith:
                 boneID = cmd.arg1
                 if boneID == 221:
-                    boneID = {ROOT_ANIMATOR_NAME}
+                    boneID = ROOT_ANIMATOR_NAME
                 if boneID in jointMap:
                     parseAnimation(
+                        face,
                         jointMap[boneID].rotation, boneID, animMap[curObjName]
                     )
                 else:
-                    parseAnimation([0, 0, 0], boneID, animMap[curObjName])
+                    parseAnimation(face, [0, 0, 0], boneID, animMap[curObjName])
                 objectmode()
             case DLCmd.MakeNetWithSubGroup:
                 iAM_MODIFYING_THE_SUBGROUP = True

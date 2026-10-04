@@ -22,6 +22,7 @@ fbl = {}
 
 regexes: dict[str, str] = {
     r"s16\sanimdata_(\w+)\[\]\[(\d+)\]": "animdata",
+    r"s16\sanim_(\w+)\[\]\[(\d+)\]": "animdata2",
     r"struct\sAnimDataInfo\sanim_(\w+)": "animinfo",
     r"s16\sverts_(\w+)\[\]\[(\d+)\]": "vtxdata",
     r"s16\s(\w+)_VtxData\[\]\[(\d+)\]": "vtxdata2",
@@ -147,6 +148,8 @@ def parseAllDynLists():
                             facedatas[f"{params[0]}_FaceData"] = parseData(file, i + 1, 4)
                         case "animdata":
                             animdatas[f"animdata_{params[0]}"] = parseData(file, i + 1, int(params[1]))
+                        case "animdata2":
+                            animdatas[f"anim_{params[0]}"] = parseData(file, i + 1, int(params[1]))
                         case "dynlist":
                             dynlists[params[0]] = parseDynlist(file, i)
     return Face(
@@ -197,3 +200,4 @@ if __name__ == "__main__":
 
     readDynLists(sys.argv[1])
     parseAllDynLists()
+    print(animdatas)
