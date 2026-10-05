@@ -3,7 +3,7 @@ from mathutils import Euler, Matrix
 
 from .Animation import parseAnimation
 from .commands import DLCmd
-from .constants import DYNOBJ_MARIO_MAIN_NET, ROOT_ANIMATOR_NAME
+from .constants import DYNOBJ_MARIO_MAIN_NET, ROOT_ANIMATOR_NAME, DYNOBJ_MARIO_MAIN_SHAPES_GROUP
 from .Face import Face
 from .GMaterial import GMaterial
 from .Joint import Joint
@@ -338,7 +338,7 @@ def parseDL(face: Face, name: str) -> int:
                 group = vtxGroups[curSkinShape]
                 group.add([int(cmd.arg2)], cmd.vec[0] / 100.0, "REPLACE")
             case DLCmd.StartGroup:
-                if cmd.arg1 != 1000 and cmd.arg1 != 1:
+                if cmd.arg1 != DYNOBJ_MARIO_MAIN_SHAPES_GROUP and cmd.arg1 != 1:
                     curMatGroup = cmd.arg1
                     matGroups[curMatGroup] = []
             case DLCmd.SetId:

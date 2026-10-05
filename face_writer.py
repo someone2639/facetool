@@ -25,5 +25,5 @@ def export(self):
             for kp in fcurve.keyframe_points:
                 print(f"  Frame: {kp.co[0]}, Value: {kp.co[1]}")
     else:
-        raise PluginError("")
+        raise PluginError("Select the Armature you want to export!")
 
