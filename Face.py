@@ -1,12 +1,14 @@
 
 
 class Face:
-    def __init__(self, dynlists, vtxdatas, facedatas, animdatas, vtxinfos, faceinfos, animinfos):
-        self.dynlists = dynlists
-        self.vtxdatas = vtxdatas
-        self.facedatas = facedatas
-        self.animdatas = animdatas
+    def __init__(self):
+        self.dynlists = {}
+        self.vtxdatas = {}
+        self.facedatas = {}
+        self.animdatas = {}
 
-        self.vtxinfos = vtxinfos
-        self.faceinfos = faceinfos
-        self.animinfos = animinfos
+        self.vtxinfos = {}
+        self.faceinfos = {}
+        self.animinfos = {}
+
+    from .face_reader import __init__

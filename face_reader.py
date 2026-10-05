@@ -3,18 +3,6 @@ import re
 import struct
 
 from .commands import CommandToArguments, CommandToDLCmd, DLCmd
-from .Face import Face
-
-dynlists = {}
-vtxdatas = {}
-facedatas = {}
-animdatas = {}
-
-vtxinfos = {}
-faceinfos = {}
-animinfos = {}
-
-fbl = {}
 
 regexes: dict[str, str] = {
     r"s16\sanimdata_(\w+)\[\]\[(\d+)\]": "animdata",
@@ -28,6 +16,20 @@ regexes: dict[str, str] = {
     r"struct\sGdFaceData\s(\w+)": "faceinfo",
     r"struct\sDynList\s(\w+)\[": "dynlist",
 }
+
+def readDynLists(folder_path: str) -> dict[str, list[str]]:
+    file_data = {}
+
+    for _, _, files in os.walk(folder_path):
+        for file in files:
+            _, ext = os.path.splitext(file)
+            if ext != ".c":
+                continue
+
+            with open(f"{folder_path}/{file}", "r") as f:
+                file_data[file] = f.readlines()
+
+    return file_data
 
 def findEndLine(data: list[str], startline: int) -> int:
     for i, line in enumerate(data[startline:]):
@@ -56,8 +58,6 @@ class Command:
             self.arg1 = args[argspec["arg1"]]
         if "arg2" in argspec:
             self.arg2 = args[argspec["arg2"]]
-
-
 
     def __str__(self):
         return f"cmd {self.type}: ({self.arg1}, {self.arg2}) {self.vec}"
@@ -116,9 +116,21 @@ def parseAnimInfo(data: list[str], startline: int):
             retinfo += [["0", "GD_ANIM_EMPTY", "NULL"]]
     return retinfo
 
-def parseAllDynLists() -> Face:
-    for filename in fbl:
-        file = fbl[filename]
+def __init__(self, folder_path: str):
+    file_data = readDynLists(folder_path)
+    self.file_map = {}
+    self.dynlists = {}
+    self.vtxdatas = {}
+    self.facedatas = {}
+    self.animdatas = {}
+
+    self.vtxinfos = {}
+    self.faceinfos = {}
+    self.animinfos = {}
+
+    for filename in file_data:
+        self.file_map[filename] = []
+        file = file_data[filename]
         for i, line in enumerate(file):
             for reg in regexes:
                 match = re.search(reg, line)
@@ -127,45 +139,33 @@ def parseAllDynLists() -> Face:
 
                     match regexes[reg]:
                         case "vtxinfo":
-                            vtxinfos[params[0]] = parseInfo(file, i, 1)[0]
-                            # if len(vtxinfos[params[0]]) > 1:
-                            #     vtxinfos[params[0]] = vtxinfos[params[0]][0]
+                            self.vtxinfos[params[0]] = parseInfo(file, i, 1)[0]
+                            self.file_map[filename].append(params[0])
                         case "faceinfo":
-                            faceinfos[params[0]] = parseInfo(file, i, 1)[0]
+                            self.faceinfos[params[0]] = parseInfo(file, i, 1)[0]
+                            self.file_map[filename].append(params[0])
                         case "animinfo":
-                            animinfos[f"anim_{params[0]}"] = parseAnimInfo(file, i)
+                            self.animinfos[f"anim_{params[0]}"] = parseAnimInfo(file, i)
+                            self.file_map[filename].append(f"anim_{params[0]}")
                         case "vtxdata":
-                            vtxdatas[f"verts_{params[0]}"] = parseData(file, i + 1, 3)
+                            self.vtxdatas[f"verts_{params[0]}"] = parseData(file, i + 1, 3)
+                            self.file_map[filename].append(f"verts_{params[0]}")
                         case "vtxdata2":
-                            vtxdatas[f"{params[0]}_VtxData"] = parseData(file, i + 1, 3)
+                            self.vtxdatas[f"{params[0]}_VtxData"] = parseData(file, i + 1, 3)
+                            self.file_map[filename].append(f"{params[0]}_VtxData")
                         case "facedata":
-                            facedatas[f"facedata_{params[0]}"] = parseData(file, i + 1, 4)
+                            self.facedatas[f"facedata_{params[0]}"] = parseData(file, i + 1, 4)
+                            self.file_map[filename].append(f"facedata_{params[0]}")
                         case "facedata2":
-                            facedatas[f"{params[0]}_FaceData"] = parseData(file, i + 1, 4)
+                            self.facedatas[f"{params[0]}_FaceData"] = parseData(file, i + 1, 4)
+                            self.file_map[filename].append(f"{params[0]}_FaceData")
                         case "animdata":
-                            animdatas[f"animdata_{params[0]}"] = parseData(file, i + 1, int(params[1]))
+                            self.animdatas[f"animdata_{params[0]}"] = parseData(file, i + 1, int(params[1]))
+                            self.file_map[filename].append(f"animdata_{params[0]}")
                         case "animdata2":
-                            animdatas[f"anim_{params[0]}"] = parseData(file, i + 1, int(params[1]))
+                            self.animdatas[f"anim_{params[0]}"] = parseData(file, i + 1, int(params[1]))
+                            self.file_map[filename].append(f"anim_{params[0]}")
                         case "dynlist":
-                            dynlists[params[0]] = parseDynlist(file, i)
-    return Face(
-        dynlists,
-        vtxdatas,
-        facedatas,
-        animdatas,
-        vtxinfos,
-        faceinfos,
-        animinfos
-    )
+                            self.dynlists[params[0]] = parseDynlist(file, i)
+                            self.file_map[filename].append(params[0])
 
-
-def readDynLists(folder_path: str):
-    global fbl
-    for _, _, files in os.walk(folder_path):
-        for file in files:
-            _, ext = os.path.splitext(file)
-            if ext != ".c":
-                continue
-
-            with open(f"{folder_path}/{file}", "r") as f:
-                fbl[file] = f.readlines()

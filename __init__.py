@@ -38,7 +38,6 @@ from bpy.utils import register_class, unregister_class
 from bpy.path import abspath
 from bpy.props import StringProperty, PointerProperty, BoolProperty
 
-from .face_reader import readDynLists, parseAllDynLists
 from .DLParse import parseDL, addRootAnimator
 from .exporter import Exporter
 from .Face import Face
@@ -50,6 +49,7 @@ import sys, os
 
 sys.dont_write_bytecode = True
 
+goddard_data = {}
 
 class FaceProperties(PropertyGroup):
     gd_work_dir: StringProperty(
@@ -81,9 +81,8 @@ class ImportFaceButton(Operator):
         face_name = bpy.path.abspath(context.scene.face_props.gd_face_name)
         if workdir and os.path.isdir(workdir):
             addRootAnimator()
-            readDynLists(workdir)
-            face = parseAllDynLists()
-            end_frame = parseDL(face, face_name)
+            goddard_data["face"] = Face(workdir)
+            end_frame = parseDL(goddard_data["face"], face_name)
             bpy.context.scene.frame_end = end_frame
             return {"FINISHED"}
         else:

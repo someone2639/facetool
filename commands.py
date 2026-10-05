@@ -113,8 +113,6 @@ CommandToDLCmd = {
     "MakeNetFromShapePtrPtr": DLCmd.MakeNetFromShapePtrPtr,
 }
 
-
-# TODO: make it better
 CommandToArguments: dict[str, dict[str, int]] = {
     "BeginList": {},
     "EndList": {},
