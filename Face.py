@@ -12,3 +12,4 @@ class Face:
         self.animinfos = {}
 
     from .face_reader import __init__
+    from .face_writer import export

@@ -114,6 +114,7 @@ class ExportFaceButton(Operator):
             )
             return {"CANCELLED"}
 
+        goddard_data['face'].export()
         # output_file = bpy.path.abspath(context.scene.face_props.gd_face_name)
 
         # if output_file and os.path.isfile(output_file):

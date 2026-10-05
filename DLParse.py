@@ -326,17 +326,13 @@ def parseDL(face: Face, name: str) -> int:
                 vtxGroups[curSkinShape] = objMap[curSkinShape].vertex_groups.new(
                     name=f"Joint_{subGroupName}"
                 )
-                print("before editmode")
                 editmode(objMap[curSkinShape])
-                print("done editmode")
                 mesh = bpy.data.meshes[f"Shape_{curSkinShape}_mesh"]
                 for v in mesh.vertices:
                     for g in v.groups:
                         g.weight = 0.0
-                print("done weighting")
                 mod.vertex_group = f"Joint_{curObjName}"
                 objectmode()
-                print("done cmd")
             case DLCmd.SetSkinWeight:
                 # Add this weight to the vertex group
                 group = vtxGroups[curSkinShape]

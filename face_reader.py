@@ -2,7 +2,7 @@ import os
 import re
 import struct
 
-from .commands import CommandToArguments, CommandToDLCmd, DLCmd
+from .commands import Command, CommandToArguments, CommandToDLCmd, DLCmd
 
 regexes: dict[str, str] = {
     r"s16\sanimdata_(\w+)\[\]\[(\d+)\]": "animdata",
@@ -36,33 +36,6 @@ def findEndLine(data: list[str], startline: int) -> int:
         if line.strip() == "};":
             return startline + i
     return -1
-
-class Command:
-    def __init__(self, cmdname: DLCmd, arg1, arg2, vec: list[float]):
-        self.type = cmdname
-        self.arg1 = arg1
-        self.arg2 = arg2
-        self.vec = vec
-
-    def __init__(self, cmdname: DLCmd, argspec: dict[str, bool], args: list[str] = None):
-        self.type = cmdname
-        self.arg1 = 0
-        self.arg2 = 0
-        self.vec = [0,0,0]
-        if "vec" in argspec:
-            baseIdx = argspec["vec"]
-            self.vec = [float(args[baseIdx]), float(args[baseIdx + 1]), float(args[baseIdx + 2])]
-        if "float1" in argspec:
-            self.vec = [float(args[argspec["float1"]]), 0, 0]
-        if "arg1" in argspec:
-            self.arg1 = args[argspec["arg1"]]
-        if "arg2" in argspec:
-            self.arg2 = args[argspec["arg2"]]
-
-    def __str__(self):
-        return f"cmd {self.type}: ({self.arg1}, {self.arg2}) {self.vec}"
-    def __repr__(self):
-        return f"Command({self.type}, ({self.arg1}, {self.arg2}) {self.vec})"
 
 def parseDynlist(data: list[str], startline: int) -> list[Command]:
     cmd_list = [i.strip() for i in data[startline:findEndLine(data, startline)]]
