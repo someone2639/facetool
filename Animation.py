@@ -8,6 +8,7 @@ from .utils import (
     editmode,
     posemode,
     objectmode,
+    base_rotation_coord_space_correction,
     rotation_coord_space_correction,
     vec_deg2rad,
     JOINT_ROTATION_MODE,
@@ -63,7 +64,7 @@ def choose_coord_space(boneID: int, vec: list[float]) -> list[float]:
     if boneID == ROOT_ANIMATOR_NAME:
         return vec
     else:
-        return coord_space_correction(vec)
+        return rotation_coord_space_correction(vec)
 
 
 def LinkAnimation(baserot, boneID, action, rotation, position):
@@ -98,7 +99,7 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
     for frame, (rot, pos) in enumerate(rotposzip(rotation, position)):
         if rot:
             cur_rotation = [
-                angle / 10.0 for angle in rotation_coord_space_correction(rot)
+                angle / 10.0 for angle in choose_coord_space(boneID, rot)
             ]
 
             # cur_rotation[2] *= -1
@@ -118,7 +119,6 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
             angle_wrap_deg(cur_rotation, 360.0)
 
             cur_rotation_rad = Euler(vec_deg2rad(cur_rotation), JOINT_ROTATION_MODE)
-
             bone.rotation_euler = cur_rotation_rad
             bone.keyframe_insert(data_path="rotation_euler", frame=frame, index=-1)
 
@@ -152,6 +152,6 @@ def parseAnimation(face, baseRot, jointID, animInfoName):
                 case "GD_ANIM_POS3S":
                     animPos.append(frame)
                 case "GD_ANIM_ROT3S_POS3S":
-                    animRot.append(rotation_coord_space_correction(frame[0:3]))
+                    animRot.append(frame[0:3])
                     animPos.append(frame[3:6])
         LinkAnimation(baseRot, jointID, i, animRot, animPos)

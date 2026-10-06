@@ -10,6 +10,8 @@ outputfmts: dict[str, str] = {
     "dynlist": "struct DynList %s[] = {",
 }
 
+# def write_symbol_to_file(filename: str):
+
 def export(self):
     # Get the active object
     obj = bpy.context.active_object

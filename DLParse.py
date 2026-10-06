@@ -16,6 +16,7 @@ from .utils import (
     objectmode,
     posemode,
     vec_deg2rad,
+    base_rotation_coord_space_correction,
 )
 
 dataGrpMap = {}
@@ -185,7 +186,7 @@ def parseDL(face: Face, name: str) -> int:
                 # dont have to impl on the importer since always [1,1,1]
                 pass
             case DLCmd.SetRotation:
-                jointMap[curObjName].rotation = cmd.vec
+                jointMap[curObjName].rotation = base_rotation_coord_space_correction(cmd.vec)
             case DLCmd.SetAttachOffset:
                 if jointMap[curObjName].parent in jointMap:
                     parentpos = [
@@ -311,9 +312,9 @@ def parseDL(face: Face, name: str) -> int:
                     )
                     all_indices = [v.index for v in mesh.vertices]
                     rootgroup.add(all_indices, 0.5, "REPLACE")
-                    mod = o.modifiers.new("Armature_Root", "ARMATURE")
-                    mod.object = bpy.data.objects[f"Root_Animator_{ROOT_ANIMATOR_NAME}"]
-                    mod.vertex_group = f"Joint_{ROOT_ANIMATOR_NAME}"
+                    # mod = o.modifiers.new("Armature_Root", "ARMATURE")
+                    # mod.object = bpy.data.objects[f"Root_Animator_{ROOT_ANIMATOR_NAME}"]
+                    # mod.vertex_group = f"Joint_{ROOT_ANIMATOR_NAME}"
                 if curObjType == "D_NET":
                     netMap[curObjName].shape = f"Shape_{cmd.arg1}"
             case DLCmd.SetSkinShape:

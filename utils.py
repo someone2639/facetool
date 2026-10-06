@@ -33,12 +33,16 @@ def angle_wrap_deg(vec: list[float], bound: float):
 
 # Positions are -XZY encoded (X is "mirrored")
 def position_coord_space_correction(xyz):
-    return [-xyz[0], xyz[2], xyz[1]]
+    return [xyz[0], xyz[1], xyz[2]]
 
 
 # Rotations are XZY encoded
 def rotation_coord_space_correction(xyz):
-    return [-xyz[0], xyz[2], xyz[1]]
+    return [xyz[0], xyz[1], xyz[2]]
+
+
+def base_rotation_coord_space_correction(xyz):
+    return [xyz[0], xyz[1], xyz[2]]
 
 
 def vec_deg2rad(rot):
