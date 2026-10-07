@@ -47,6 +47,8 @@ from bpy.types import Panel, PropertyGroup
 
 import sys, os
 
+from .debug import print_anim_info
+
 sys.dont_write_bytecode = True
 
 goddard_data = {}
@@ -62,6 +64,10 @@ class FaceProperties(PropertyGroup):
         name="Face DL Name",
         description="the name of the face DynList",
         default="dynlist_mario_master",
+    )
+    debug_bone_name: StringProperty(
+        name="debug",
+        default="Joint_DYNOBJ_MARIO_MAIN_ANIMATOR"
     )
 
 
@@ -89,6 +95,21 @@ class ImportFaceButton(Operator):
             self.report({"ERROR"}, "No import file specified!")
             return {"CANCELLED"}
 
+
+class DebugBoneButton(Operator):
+    """tooltip goes here"""
+
+    bl_idname = "demo.debugoperator"
+    bl_label = "debug print bones"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return context.mode == "OBJECT"
+
+    def execute(self, context):
+        print_anim_info(context.scene.face_props.debug_bone_name)
+        return {"FINISHED"}
 
 class ExportFaceButton(Operator):
     """tooltip goes here"""
@@ -147,11 +168,14 @@ class PANEL_PT_GoddardSidebar(Panel):
         col.prop(faceprops, "gd_face_name")
         prop = col.operator(ImportFaceButton.bl_idname, text="Import Mario Face")
         prop = col.operator(ExportFaceButton.bl_idname, text="Export Mario Face")
+        col.prop(faceprops, "debug_bone_name")
+        prop = col.operator(DebugBoneButton.bl_idname, text="Debug Print Bone Data")
 
 
 classes = [
     ImportFaceButton,
     ExportFaceButton,
+    DebugBoneButton,
     FaceProperties,
     PANEL_PT_GoddardSidebar,
 ]

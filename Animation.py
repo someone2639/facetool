@@ -10,6 +10,7 @@ from .utils import (
     objectmode,
     base_rotation_coord_space_correction,
     rotation_coord_space_correction,
+    position_coord_space_correction,
     vec_deg2rad,
     JOINT_ROTATION_MODE,
     angle_wrap_deg,
@@ -62,7 +63,7 @@ def set_local_rotation(obj, value):
 
 def choose_coord_space(boneID: int, vec: list[float]) -> list[float]:
     if boneID == ROOT_ANIMATOR_NAME:
-        return vec
+        return rotation_coord_space_correction(vec)
     else:
         return rotation_coord_space_correction(vec)
 
@@ -116,14 +117,15 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
             cur_rotation[0] /= 2.0
             cur_rotation[1] /= 2.0
             cur_rotation[2] /= 2.0
-            angle_wrap_deg(cur_rotation, 360.0)
+            angle_wrap_deg(cur_rotation, 180.0)
 
             cur_rotation_rad = Euler(vec_deg2rad(cur_rotation), JOINT_ROTATION_MODE)
             bone.rotation_euler = cur_rotation_rad
             bone.keyframe_insert(data_path="rotation_euler", frame=frame, index=-1)
 
         if pos:
-            bone.location = [p / 10.0 for p in pos]
+            curr_pos = position_coord_space_correction([p / 10.0 for p in pos])
+            bone.location = curr_pos
             bone.keyframe_insert(data_path="location", frame=frame, index=-1)
         # else:
         #     bone.location = (0, 0, 0)

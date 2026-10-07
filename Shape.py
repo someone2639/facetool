@@ -41,7 +41,7 @@ def constructShape(face, oId, shape):
     mesh = bpy.data.meshes[f"Shape_{oId}_mesh"]
     print(f"before meshing {oId}")
     mesh.from_pydata(
-        face.vtxdatas[face.vtxinfos[shape.verts][0]],
+        [position_coord_space_correction(v) for v in face.vtxdatas[face.vtxinfos[shape.verts][0]]],
         [],
         [i[1:4] for i in face.facedatas[face.faceinfos[shape.faces][0]]]
     )
