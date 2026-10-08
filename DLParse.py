@@ -17,6 +17,9 @@ from .utils import (
     posemode,
     vec_deg2rad,
     base_rotation_coord_space_correction,
+    rotation_coord_space_correction,
+    position_coord_space_correction,
+    angle_wrap_deg,
 )
 
 dataGrpMap = {}
@@ -73,6 +76,7 @@ def parent_bone(name: str, parent_name: str):
 
 
 def position_bone(boneName, position, rotation_deg):
+    rotation_rad = vec_deg2rad(rotation_deg)
     # print("position_bone",boneName,position,rotation_deg)
     armature = bpy.data.objects.get(f"Root_Animator_{ROOT_ANIMATOR_NAME}")
     editmode(armature)
@@ -82,8 +86,8 @@ def position_bone(boneName, position, rotation_deg):
 
     R = Matrix.LocRotScale(
         position,
-        None,
-        # Euler(vec_deg2rad(rotation_deg), JOINT_ROTATION_MODE),
+        # None,
+        Euler(rotation_rad, JOINT_ROTATION_MODE),
         None,
     )
 
@@ -186,18 +190,22 @@ def parseDL(face: Face, name: str) -> int:
                 # dont have to impl on the importer since always [1,1,1]
                 pass
             case DLCmd.SetRotation:
-                jointMap[curObjName].rotation = base_rotation_coord_space_correction(cmd.vec)
+                cur_rotation = rotation_coord_space_correction(cmd.vec)
+
+                jointMap[curObjName].rotation = cur_rotation
             case DLCmd.SetAttachOffset:
                 if jointMap[curObjName].parent in jointMap:
                     parentpos = [
                         j for j in jointMap[jointMap[curObjName].parent].position
                     ]
-                    parentpos[0] += cmd.vec[0]
-                    parentpos[1] += cmd.vec[1]
-                    parentpos[2] += cmd.vec[2]
+                    parentpos = [a + b for a, b in zip(parentpos, position_coord_space_correction(cmd.vec))]
                     position_bone(curObjName, parentpos, [0, 0, 0])
                 else:
-                    position_bone(curObjName, cmd.vec, jointMap[curObjName].rotation)
+                    position_bone(
+                        curObjName,
+                        position_coord_space_correction(cmd.vec),
+                        jointMap[curObjName].rotation
+                    )
                 if iAM_MODIFYING_THE_SUBGROUP:
                     # subgrot = Matrix.LocRotScale(
                     #     jointMap[subGroupName].position,
@@ -209,7 +217,7 @@ def parseDL(face: Face, name: str) -> int:
                     # jointMap[curObjName].position = finalmtx.to_translation()
                     # print(f"Using matrix math to set Joint_{curObjName} to {jointMap[curObjName].position}")
                     # print(f"btw the matrix was {finalmtx}")
-                    jointMap[subGroupName].position = cmd.vec
+                    jointMap[subGroupName].position = position_coord_space_correction(cmd.vec)
                     # print(f"Set SubJoint_{subGroupName} to pos {cmd.vec}")
                     position_bone(
                         subGroupName,
@@ -220,7 +228,7 @@ def parseDL(face: Face, name: str) -> int:
                     if cmd.vec == [0, 0, 0] and subGroupName != 0:
                         jointMap[curObjName].position = jointMap[subGroupName].position
                     else:
-                        jointMap[curObjName].position = cmd.vec
+                        jointMap[curObjName].position = position_coord_space_correction(cmd.vec)
                     position_bone(
                         curObjName,
                         jointMap[curObjName].position,

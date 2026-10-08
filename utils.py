@@ -38,11 +38,11 @@ def position_coord_space_correction(xyz):
 
 # Rotations are XZY encoded
 def rotation_coord_space_correction(xyz):
-    return [xyz[0], xyz[1], xyz[2]]
+    return [-xyz[0], xyz[1], xyz[2]]
 
 
 def base_rotation_coord_space_correction(xyz):
-    return [xyz[0], xyz[1], xyz[2]]
+    return [-xyz[0], xyz[1], xyz[2]]
 
 
 def vec_deg2rad(rot):
