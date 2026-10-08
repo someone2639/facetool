@@ -119,6 +119,7 @@ def parseDL(face: Face, name: str) -> int:
     iAM_MODIFYING_THE_SUBGROUP = False
 
     cmdList = face.dynlists[name]
+    print([c for c in cmdList if c.arg1 == "DYNOBJ_MARIO_LEFT_EYE_JOINT_1"])
 
     for cmd in cmdList:
         match cmd.type:
@@ -168,7 +169,8 @@ def parseDL(face: Face, name: str) -> int:
             case DLCmd.SetType:
                 # Type 2 is a root net?
                 # type 3 is a sub net?
-                netMap[curObjName].type = cmd.arg2
+                # TODO: make an enum in branch
+                netMap[curObjName].type = int(cmd.arg2)
             case DLCmd.SetNodeGroup:
                 if curObjType == "D_SHAPE":
                     shapeMap[curObjName].verts = dataGrpMap[cmd.arg1][0].replace(
@@ -249,7 +251,7 @@ def parseDL(face: Face, name: str) -> int:
                         obj = bpy.data.objects[netMap[curObjName].shape]
 
                         jointToCopy = jointMap[cmd.arg1]
-                        print(f"Setting {curObjName} to {jointToCopy.position}")
+                        print(f"Setting {netMap[curObjName].shape} to {jointToCopy.position}")
 
                         obj.rotation_euler = Euler(
                             jointToCopy.rotation, JOINT_ROTATION_MODE

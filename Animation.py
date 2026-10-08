@@ -105,8 +105,8 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
 
             # cur_rotation[2] *= -1
 
-            if frame == 0:
-                print(f"{boneID}: Cur_rot {cur_rotation} Base {base_rotation}")
+            # if frame == 0:
+            #     print(f"{boneID}: Cur_rot {cur_rotation} Base {base_rotation}")
 
             cur_rotation[0] -= base_rotation[0]
             cur_rotation[1] -= base_rotation[1]
