@@ -10,14 +10,16 @@ from mathutils import Euler, Vector, Matrix
 
 from .GMaterial import GMaterial
 from .utils import (
-    editmode,
-    posemode,
-    objectmode,
     getFrameInterval,
     vec_rad2deg,
     get_weights,
 )
 
+from .blender_helpers import (
+    editmode,
+    posemode,
+    objectmode,
+)
 
 # TODO: binary exporter too (as a separate thing?)
 # TODO: write all names into an enum before writing data

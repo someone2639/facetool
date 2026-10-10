@@ -4,10 +4,12 @@ import mathutils
 from .constants import ROOT_ANIMATOR_NAME
 from itertools import zip_longest
 from mathutils import Euler, Matrix
-from .utils import (
+from .blender_helpers import (
     editmode,
     posemode,
     objectmode,
+)
+from .utils import (
     base_rotation_coord_space_correction,
     rotation_coord_space_correction,
     position_coord_space_correction,

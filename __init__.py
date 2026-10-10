@@ -38,9 +38,11 @@ from bpy.utils import register_class, unregister_class
 from bpy.path import abspath
 from bpy.props import StringProperty, PointerProperty, BoolProperty
 
-from .DLParse import parseDL, addRootAnimator
+from .DLParse import parseDL
 from .exporter import Exporter
 from .Face import Face
+
+from .blender_helpers import make_root_animator
 
 from bpy.types import Operator
 from bpy.types import Panel, PropertyGroup
@@ -86,7 +88,7 @@ class ImportFaceButton(Operator):
         workdir = bpy.path.abspath(context.scene.face_props.gd_work_dir)
         face_name = bpy.path.abspath(context.scene.face_props.gd_face_name)
         if workdir and os.path.isdir(workdir):
-            addRootAnimator()
+            make_root_animator()
             goddard_data["face"] = Face(workdir)
             end_frame = parseDL(goddard_data["face"], face_name)
             bpy.context.scene.frame_end = end_frame

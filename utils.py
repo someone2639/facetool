@@ -3,26 +3,6 @@ import math
 
 JOINT_ROTATION_MODE = "XYZ"
 
-
-def editmode(o):
-    bpy.context.view_layer.objects.active = o
-    o.select_set(True)
-    if bpy.context.mode != "EDIT":
-        bpy.ops.object.mode_set(mode="EDIT")
-
-
-def posemode(o):
-    bpy.context.view_layer.objects.active = o
-    o.select_set(True)
-    if bpy.context.mode != "POSE":
-        bpy.ops.object.mode_set(mode="POSE")
-
-
-def objectmode():
-    if bpy.context.mode != "OBJECT":
-        bpy.ops.object.mode_set(mode="OBJECT")
-
-
 def angle_wrap_deg(vec: list[float], bound: float):
     for i in range(len(vec)):
         while vec[i] < -bound:
