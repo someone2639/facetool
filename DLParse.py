@@ -38,6 +38,7 @@ from .blender_helpers import (
     make_object_vertex_group,
     # position_object_at_joint,
     # get_current_object_position,
+    weight_mesh_to_joint,
 )
 
 dataGrpMap = {}
@@ -45,6 +46,8 @@ shapeMap = {}
 vtxGroups = {}
 objMap = {}
 jointMap = {}
+animMap = {}
+netMap = {}
 
 
 def parseDL(face: Face, name: str) -> int:
@@ -54,6 +57,8 @@ def parseDL(face: Face, name: str) -> int:
     global matGroups
     global vtxGroups
     global jointMap
+    global animMap
+    global netMap
     curObjType = 0
     curObjName = "0"
     subGroupName = 0
@@ -226,6 +231,7 @@ def parseDL(face: Face, name: str) -> int:
                             jointToCopy.rotation, JOINT_ROTATION_MODE
                         )
                         set_object_joint(obj, cmd.arg1)
+                        weight_mesh_to_joint(obj, f"{netMap[curObjName].shape}_mesh", f"Joint_{cmd.arg1}")
             case DLCmd.LinkWith:
                 boneID = cmd.arg1
                 if boneID == DYNOBJ_MARIO_MAIN_NET:

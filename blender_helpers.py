@@ -92,12 +92,12 @@ def set_object_parent(obj, parent_name: str):
 def make_object_vertex_group(obj, name: str):
     return obj.vertex_groups.new(name=name)
 
-def something():
-    mesh = bpy.data.meshes[f"{netMap[curObjName].shape}_mesh"]
+def weight_mesh_to_joint(obj, mesh_name: str, joint_name: str):
+    mesh = bpy.data.meshes[mesh_name]
     all_indices = [v.index for v in mesh.vertices]
 
-    rootgroup = make_object_vertex_group(obj, f"Joint_{cmd.arg1}")
-    rootgroup.add(all_indices, 0.5, "REPLACE")
+    rootgroup = make_object_vertex_group(obj, joint_name)
+    rootgroup.add(all_indices, 1.0, "REPLACE")
 
 def clear_object_weights(obj):
     mesh = obj.data
