@@ -8,6 +8,7 @@ from .blender_helpers import (
     editmode,
     posemode,
     objectmode,
+    get_root_animator,
 )
 from .utils import (
     base_rotation_coord_space_correction,
@@ -73,7 +74,7 @@ def choose_coord_space(boneID: int, vec: list[float]) -> list[float]:
 def LinkAnimation(baserot, boneID, action, rotation, position):
     action_name = f"FaceAction_{action}"
     action = bpy.data.actions.get(action_name)
-    armature = bpy.data.objects.get(f"Root_Animator_{ROOT_ANIMATOR_NAME}")
+    armature = get_root_animator()
 
     base_rotation = baserot
     editmode(armature)
@@ -95,7 +96,7 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
     # Step 3: Apply Transformations (position or rotation)
     if len(rotation) > 0:
         posemode(armature)
-        bpy.data.objects[f"Root_Animator_{ROOT_ANIMATOR_NAME}"].pose.bones[
+        get_root_animator().pose.bones[
             f"Joint_{boneID}"
         ].rotation_mode = JOINT_ROTATION_MODE
         objectmode()
