@@ -10,6 +10,26 @@ from .utils import (
     angle_wrap_deg,
 )
 
+current_object_pos = [0, 0, 0]
+stashed_object_pos = [0, 0, 0]
+
+def stash_obj():
+    global stashed_object_pos
+    global current_object_pos
+    stashed_object_pos = current_object_pos
+
+def unstash_obj():
+    global stashed_object_pos
+    global current_object_pos
+    current_object_pos = stashed_object_pos
+
+def set_current_obj(pos):
+    global current_object_pos
+    current_object_pos = pos
+
+def get_world_pos() -> list[float]:
+    global current_object_pos
+    return current_object_pos
 
 def editmode(o):
     bpy.context.view_layer.objects.active = o

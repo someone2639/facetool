@@ -39,6 +39,11 @@ from .blender_helpers import (
     # position_object_at_joint,
     # get_current_object_position,
     weight_mesh_to_joint,
+
+    stash_obj,
+    unstash_obj,
+    set_current_obj,
+    get_world_pos,
 )
 
 dataGrpMap = {}
@@ -105,6 +110,7 @@ def parseDL(face: Face, name: str) -> int:
                         objMap[curObjName] = new_object(curObjName)
                         set_object_position(objMap[curObjName], [0, 0, 0])
                         set_object_parent(objMap[curObjName], ROOT_ANIMATOR_NAME)
+                        set_current_obj(objMap[curObjName].location)
                     case "D_ANIMATOR":
                         pass
                     case "D_MATERIAL":
@@ -188,7 +194,7 @@ def parseDL(face: Face, name: str) -> int:
             case DLCmd.AttachTo:
                 if curObjType != "D_ANIMATOR":
                     if subGroupName != 0:
-                        print(f"Attaching subgroup {subGroupName} to {cmd.arg1}...")
+                        print(f"{curObjType} Attaching subgroup {subGroupName} to {cmd.arg1}...")
                         parent_joint(subGroupName, cmd.arg1)
                         jointMap[subGroupName].parent = cmd.arg1
                     else:
@@ -196,42 +202,46 @@ def parseDL(face: Face, name: str) -> int:
                         parent_joint(curObjName, cmd.arg1)
                         jointMap[curObjName].parent = cmd.arg1
                 if curObjType == "D_NET":
-                    current_obj_world_pos = bpy.data.objects[netMap[curObjName].shape].matrix_world.translation
+                    print("stash_obj")
+                    stash_obj()
+                    jointNameArg: str = cmd.arg1
                     flag: int = int(cmd.arg2, 16)
-                    zerovec = [0, 0, 0]
-                    if netMap[curObjName].type == 3:
-                        obj = bpy.data.objects[netMap[curObjName].shape]
-                        jointToCopy = jointMap[cmd.arg1]
+                    obj = bpy.data.objects[netMap[curObjName].shape]
 
-                        # Logic for 'flag & 9' (Maintaining relative offset)
-                        if (flag & 9):
-                            # C code: currObjPos = currentWorldPos - targetWorldPos
-                            # targetWorldPos is jointToCopy.position
-                            offset = [
-                                current_obj_world_pos[0] - jointToCopy.position[0],
-                                current_obj_world_pos[1] - jointToCopy.position[1],
-                                current_obj_world_pos[2] - jointToCopy.position[2]
-                            ]
-                           
-                            # Apply the target position PLUS the offset
-                            if jointToCopy.name != DYNOBJ_MARIO_MAIN_NET:
-                                obj.location = [a + b for a, b in zip(jointToCopy.position, offset)]
-                            else:
-                                obj.location = offset
-                        else:
-                            # Original "Snap" behavior (flag & 9 is false)
-                            if jointToCopy.name != DYNOBJ_MARIO_MAIN_NET:
-                                obj.location = jointToCopy.position
-                            else:
-                                obj.location = [0, 0, 0]
+                    jointToCopy = jointMap[jointNameArg]
 
-                        print(f"Setting {netMap[curObjName].shape} to {jointToCopy.position}")
+                    # Logic for 'flag & 9' (Maintaining relative offset)
+                    if (flag & 9):
+                        print("get_world_pos")
+                        currObjPos = get_world_pos()
+                        print("set_cur_obj")
+                        set_current_obj(obj.location)
+                        print("get_world_pos")
+                        objPos = get_world_pos()
+                        currObjPos[0] -= objPos[0]
+                        currObjPos[1] -= objPos[1]
+                        currObjPos[2] -= objPos[2]
 
-                        obj.rotation_euler = Euler(
-                            jointToCopy.rotation, JOINT_ROTATION_MODE
-                        )
-                        set_object_joint(obj, cmd.arg1)
-                        weight_mesh_to_joint(obj, f"{netMap[curObjName].shape}_mesh", f"Joint_{cmd.arg1}")
+                    print("unstash_obj")
+                    unstash_obj()
+
+                    print("rotation_euler")
+                    # print(f"Setting {netMap[curObjName].shape} to {jointToCopy.position}")
+                    obj.rotation_euler = Euler(
+                        jointToCopy.rotation, JOINT_ROTATION_MODE
+                    )
+                    print("set_object_joint")
+                    set_object_joint(obj, jointNameArg)
+                    print("weight_mesh_to_joint")
+                    weight_mesh_to_joint(obj, f"{netMap[curObjName].shape}_mesh", f"Joint_{cmd.arg1}")
+
+                    if flag & 9:
+                        print("set loc")
+                        set_object_position(obj, currObjPos)
+                        # if jointToCopy.name != DYNOBJ_MARIO_MAIN_NET:
+                        #     obj.location = [a + b for a, b in zip(jointToCopy.position, offset)]
+                        # else:
+
             case DLCmd.LinkWith:
                 boneID = cmd.arg1
                 if boneID == DYNOBJ_MARIO_MAIN_NET:
