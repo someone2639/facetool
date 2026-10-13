@@ -42,7 +42,7 @@ from .DLParse import parseDL
 from .exporter import Exporter
 from .Face import Face
 
-from .blender_helpers import make_root_animator
+from .blender_helpers import make_root_animator, delete_unused_bones
 
 from bpy.types import Operator
 from bpy.types import Panel, PropertyGroup
@@ -92,6 +92,7 @@ class ImportFaceButton(Operator):
             goddard_data["face"] = Face(workdir)
             end_frame = parseDL(goddard_data["face"], face_name)
             bpy.context.scene.frame_end = end_frame
+            delete_unused_bones()
             return {"FINISHED"}
         else:
             self.report({"ERROR"}, "No import file specified!")

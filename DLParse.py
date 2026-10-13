@@ -202,7 +202,6 @@ def parseDL(face: Face, name: str) -> int:
                         parent_joint(curObjName, cmd.arg1)
                         jointMap[curObjName].parent = cmd.arg1
                 if curObjType == "D_NET":
-                    print("stash_obj")
                     stash_obj()
                     jointNameArg: str = cmd.arg1
                     flag: int = int(cmd.arg2, 16)
@@ -212,31 +211,23 @@ def parseDL(face: Face, name: str) -> int:
 
                     # Logic for 'flag & 9' (Maintaining relative offset)
                     if (flag & 9):
-                        print("get_world_pos")
                         currObjPos = get_world_pos()
-                        print("set_cur_obj")
                         set_current_obj(obj.location)
-                        print("get_world_pos")
                         objPos = get_world_pos()
                         currObjPos[0] -= objPos[0]
                         currObjPos[1] -= objPos[1]
                         currObjPos[2] -= objPos[2]
 
-                    print("unstash_obj")
                     unstash_obj()
 
-                    print("rotation_euler")
                     # print(f"Setting {netMap[curObjName].shape} to {jointToCopy.position}")
                     obj.rotation_euler = Euler(
                         jointToCopy.rotation, JOINT_ROTATION_MODE
                     )
-                    print("set_object_joint")
                     set_object_joint(obj, jointNameArg)
-                    print("weight_mesh_to_joint")
                     weight_mesh_to_joint(obj, f"{netMap[curObjName].shape}_mesh", f"Joint_{cmd.arg1}")
 
                     if flag & 9:
-                        print("set loc")
                         set_object_position(obj, currObjPos)
                         # if jointToCopy.name != DYNOBJ_MARIO_MAIN_NET:
                         #     obj.location = [a + b for a, b in zip(jointToCopy.position, offset)]

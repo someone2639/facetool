@@ -153,3 +153,86 @@ def make_root_animator():
 def get_root_animator():
     return bpy.data.objects[ROOT_ANIMATOR_NAME]
 
+def delete_unused_bones():
+    # Find all bones referenced by animation data on the armature.
+    for armature_obj in [
+        obj for obj in bpy.context.scene.objects
+        if obj.type == 'ARMATURE'
+    ]:
+        armature = armature_obj.data
+
+        animated_bones = set()
+
+        # Check animation on the armature object and its armature data.
+        for owner in (armature_obj, armature):
+            anim_data = owner.animation_data
+            if not anim_data:
+                continue
+
+            actions = []
+            if anim_data.action:
+                actions.append(anim_data.action)
+
+            # Blender 4.x/5.x layered action support.
+            for track in anim_data.nla_tracks:
+                for strip in track.strips:
+                    if strip.action:
+                        actions.append(strip.action)
+
+            for action in actions:
+                for fc in action.fcurves:
+                    path = fc.data_path
+                    if path.startswith('pose.bones["'):
+                        bone_name = path.split('"')[1]
+                        animated_bones.add(bone_name)
+
+        # Find bones with nonzero vertex weights.
+        weighted_bones = set()
+
+        for obj in bpy.context.scene.objects:
+            if obj.type != 'MESH':
+                continue
+
+            # Only consider meshes using this armature.
+            if not any(
+                mod.type == 'ARMATURE' and mod.object == armature_obj
+                for mod in obj.modifiers
+            ):
+                continue
+
+            for group in obj.vertex_groups:
+                for vertex in obj.data.vertices:
+                    for assignment in vertex.groups:
+                        if (
+                            assignment.group == group.index
+                            and assignment.weight > 0.0
+                        ):
+                            weighted_bones.add(group.name)
+                            break
+
+        # Delete bones meeting neither usage condition.
+        unused_bones = [
+            bone.name for bone in armature.bones
+            if bone.name not in animated_bones
+            and bone.name not in weighted_bones
+        ]
+
+        if not unused_bones:
+            continue
+
+        bpy.context.view_layer.objects.active = armature_obj
+        armature_obj.select_set(True)
+
+        if bpy.context.object.mode != 'OBJECT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+        bpy.ops.object.mode_set(mode='EDIT')
+        for name in unused_bones:
+            bone = armature.edit_bones.get(name)
+            if bone:
+                armature.edit_bones.remove(bone)
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+        print(f"{armature_obj.name}: removed {len(unused_bones)} bones")
+        print("  " + ", ".join(unused_bones))
+

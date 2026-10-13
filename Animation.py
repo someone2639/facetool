@@ -66,7 +66,7 @@ def set_local_rotation(obj, value):
 
 def choose_coord_space(boneID: int, vec: list[float]) -> list[float]:
     if boneID == ROOT_ANIMATOR_NAME:
-        return rotation_coord_space_correction(vec)
+        return base_rotation_coord_space_correction(vec)
     else:
         return rotation_coord_space_correction(vec)
 
