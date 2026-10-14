@@ -69,7 +69,7 @@ class FaceProperties(PropertyGroup):
     )
     debug_bone_name: StringProperty(
         name="debug",
-        default="Joint_DYNOBJ_MARIO_MAIN_ANIMATOR"
+        default="Joint_DYNOBJ_MARIO_LEFT_EYEBROW_RPART_JOINT_1"
     )
 
 

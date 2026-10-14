@@ -1,27 +1,41 @@
 import bpy
-import math
 
 def print_anim_info(bone_name: str):
     obj = bpy.context.active_object
-
     if obj is None or obj.type != 'ARMATURE':
-        raise PluginError("Active object is not an armature")
-
-    action = obj.animation_data.action
+        print("Error: Select an armature.")
+        return
 
     bone = obj.pose.bones.get(bone_name)
+    if bone is None:
+        print(f"Error: Bone '{bone_name}' not found.")
+        return
 
     scene = bpy.context.scene
-    old_frame = scene.frame_current
+    original_frame = scene.frame_current
+    action = obj.animation_data.action if obj.animation_data else None
+
+    if action is None:
+        print("Error: Armature has no active action.")
+        return
 
     start = int(action.frame_range[0])
     end = int(action.frame_range[1])
 
-    for frame in range(start, end + 1):
-        scene.frame_set(frame)
+    print(f"Animation: {action.name}")
+    print(f"Bone: {bone_name}")
+    print(f"Frames: {start}-{end}")
 
-        r = bone.rotation_euler
+    try:
+        scene.frame_set(15)
+        bpy.context.view_layer.update()
 
-        print(f"{frame}: {{{math.degrees(r.x):.6f}, {math.degrees(r.y):.6f}, {math.degrees(r.z):.6f}}}")
+        # matrix = bone.matrix.copy()
+        matrix = (obj.matrix_world @ bone.matrix).transposed()
 
-    scene.frame_set(old_frame)
+        print(f"\nFrame {15}:")
+        for row in matrix:
+            print("    [" + ", ".join(f"{v:.6f}" for v in row) + ", ]")
+
+    finally:
+        scene.frame_set(original_frame)

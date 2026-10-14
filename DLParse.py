@@ -176,11 +176,11 @@ def parseDL(face: Face, name: str) -> int:
                     # print(f"btw the matrix was {finalmtx}")
                     jointMap[subGroupName].position = position_coord_space_correction(cmd.vec)
                     # print(f"Set SubJoint_{subGroupName} to pos {cmd.vec}")
-                    set_joint_position(
-                        subGroupName,
-                        jointMap[subGroupName].position,
-                        jointMap[subGroupName].rotation,
-                    )
+                    # set_joint_position(
+                    #     subGroupName,
+                    #     jointMap[subGroupName].position,
+                    #     jointMap[subGroupName].rotation,
+                    # )
                 else:
                     if cmd.vec == [0, 0, 0] and subGroupName != 0:
                         jointMap[curObjName].position = jointMap[subGroupName].position
@@ -195,13 +195,13 @@ def parseDL(face: Face, name: str) -> int:
                 if curObjType != "D_ANIMATOR":
                     if subGroupName != 0:
                         print(f"{curObjType} Attaching subgroup {subGroupName} to {cmd.arg1}...")
-                        parent_joint(subGroupName, cmd.arg1)
+                        # parent_joint(subGroupName, cmd.arg1)
                         jointMap[subGroupName].parent = cmd.arg1
                     else:
                         print(f"Attaching {curObjName} to {cmd.arg1}...")
                         parent_joint(curObjName, cmd.arg1)
                         jointMap[curObjName].parent = cmd.arg1
-                if curObjType == "D_NET":
+                if True:
                     stash_obj()
                     jointNameArg: str = cmd.arg1
                     flag: int = int(cmd.arg2, 16)
@@ -228,11 +228,10 @@ def parseDL(face: Face, name: str) -> int:
                     weight_mesh_to_joint(obj, f"{netMap[curObjName].shape}_mesh", f"Joint_{cmd.arg1}")
 
                     if flag & 9:
-                        set_object_position(obj, currObjPos)
-                        # if jointToCopy.name != DYNOBJ_MARIO_MAIN_NET:
-                        #     obj.location = [a + b for a, b in zip(jointToCopy.position, offset)]
-                        # else:
-
+                        if curObjType == "D_NET":
+                            set_object_position(obj, currObjPos)
+                        else:
+                            set_joint_position(jointNameArg, currObjPos, jointToCopy.rotation)
             case DLCmd.LinkWith:
                 boneID = cmd.arg1
                 if boneID == DYNOBJ_MARIO_MAIN_NET:
@@ -248,7 +247,8 @@ def parseDL(face: Face, name: str) -> int:
                 iAM_MODIFYING_THE_SUBGROUP = True
                 subGroupName = cmd.arg1
                 jointMap[subGroupName] = Joint(subGroupName)
-                jointMap[subGroupName].bone = new_joint(f"Joint_{subGroupName}", True)
+                # jointMap[subGroupName].bone = new_joint(f"Joint_{subGroupName}", True)
+                # curObjType = "D_JOINT"
             case DLCmd.EndNetWithSubGroup:
                 subGroupName = 0
                 curSkinShape = 0
