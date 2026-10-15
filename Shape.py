@@ -25,16 +25,14 @@ def registerMats(obj, matID, mats):
         obj.data.materials.append(new_mat)
         obj.active_material_index = len(obj.data.materials) - 1
 
-def constructShape(face, oId, shape):
-    mesh = bpy.data.meshes[f"Shape_{oId}_mesh"]
-    print(f"before meshing {oId}")
+def constructShape(face, shape, matID, mats):
+    mesh = bpy.data.meshes[f"Shape_{shape.name}_mesh"]
     mesh.from_pydata(
         [position_coord_space_correction(v) for v in face.vtxdatas[face.vtxinfos[shape.verts][0]]],
         [],
         [i[1:4] for i in face.facedatas[face.faceinfos[shape.faces][0]]]
     )
-    print(f"after meshing {oId}")
-    # registerMats(bpy.data.objects[f"Shape_{oId}"], shape.materials)
+    registerMats(bpy.data.objects[f"Shape_{shape.name}"], matID, mats)
     matIndices = [i[0] for i in face.facedatas[face.faceinfos[shape.faces][0]]]
     for i, f in enumerate(mesh.polygons):
         f.material_index = matIndices[i]

@@ -48,7 +48,7 @@ class Scene():
         for shape in self.shapes:
             s = self.shapes[shape]
             new_object(shape)
-            constructShape(face, shape, s)
+            constructShape(face, s, s.materials, self.materials[s.materials])
         for joint in self.joints:
             j = self.joints[joint]
             bjoint = new_joint(f"Joint_{j.name}")
