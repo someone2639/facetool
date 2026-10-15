@@ -38,26 +38,38 @@ from bpy.utils import register_class, unregister_class
 from bpy.path import abspath
 from bpy.props import StringProperty, PointerProperty, BoolProperty
 
-from .main import readDL, readFile
-from .DLParse import parseDL, addRootAnimator
+from .DLParse import parseDL
 from .exporter import Exporter
+from .Face import Face
+
+from .blender_helpers import make_root_animator, delete_unused_bones
 
 from bpy.types import Operator
 from bpy.types import Panel, PropertyGroup
 
 import sys, os
 
+from .debug import print_anim_info
+
 sys.dont_write_bytecode = True
 
+goddard_data = {}
 
 class FaceProperties(PropertyGroup):
-    gd_bin_file: StringProperty(
-        name="Path to gd.bin",
-        description="This file has all the face data to import.",
-        subtype="FILE_NAME",
+    gd_work_dir: StringProperty(
+        name="Work Folder",
+        description="example: src/goddard/dynlists/",
+        default="/home/faris/Decomps/HackerSM64/src/goddard/dynlists/",
+        subtype="DIR_PATH",
     )
-    gd_out_file: StringProperty(
-        name="Output C file", description="Where should this go?", subtype="FILE_NAME"
+    gd_face_name: StringProperty(
+        name="Face DL Name",
+        description="the name of the face DynList",
+        default="dynlist_mario_master",
+    )
+    debug_bone_name: StringProperty(
+        name="debug",
+        default="Joint_DYNOBJ_MARIO_LEFT_EYEBROW_RPART_JOINT_1"
     )
 
 
@@ -73,18 +85,33 @@ class ImportFaceButton(Operator):
         return context.mode == "OBJECT"
 
     def execute(self, context):
-        input_file = bpy.path.abspath(context.scene.face_props.gd_bin_file)
-        if input_file and os.path.isfile(input_file):
-            addRootAnimator()
-            readFile(input_file)
-            cmdList = readDL(0)
-            parseDL(cmdList)
-            bpy.context.scene.frame_end = 820
+        workdir = bpy.path.abspath(context.scene.face_props.gd_work_dir)
+        face_name = bpy.path.abspath(context.scene.face_props.gd_face_name)
+        if workdir and os.path.isdir(workdir):
+            make_root_animator()
+            goddard_data["face"] = Face(workdir)
+            scene = parseDL(goddard_data["face"], face_name, root = True)
+            bpy.context.scene.frame_end = scene.end_frame
             return {"FINISHED"}
         else:
             self.report({"ERROR"}, "No import file specified!")
             return {"CANCELLED"}
 
+
+class DebugBoneButton(Operator):
+    """tooltip goes here"""
+
+    bl_idname = "demo.debugoperator"
+    bl_label = "debug print bones"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return context.mode == "OBJECT"
+
+    def execute(self, context):
+        print_anim_info(context.scene.face_props.debug_bone_name)
+        return {"FINISHED"}
 
 class ExportFaceButton(Operator):
     """tooltip goes here"""
@@ -110,20 +137,21 @@ class ExportFaceButton(Operator):
             )
             return {"CANCELLED"}
 
-        output_file = bpy.path.abspath(context.scene.face_props.gd_out_file)
+        goddard_data['face'].export()
+        # output_file = bpy.path.abspath(context.scene.face_props.gd_face_name)
 
-        if output_file and os.path.isfile(output_file):
-            pass
-        else:
-            self.report({"ERROR"}, "No Output file specified!")
-            return {"CANCELLED"}
+        # if output_file and os.path.isfile(output_file):
+        #     pass
+        # else:
+        #     self.report({"ERROR"}, "No Output file specified!")
+        #     return {"CANCELLED"}
 
-        exp = Exporter(output_file)
+        # exp = Exporter(output_file)
 
-        for armature in armatureList:
-            exp.export(armature)
+        # for armature in armatureList:
+        #     exp.export(armature)
 
-        exp.closeFile()
+        # exp.closeFile()
 
         return {"FINISHED"}
 
@@ -138,15 +166,18 @@ class PANEL_PT_GoddardSidebar(Panel):
         scene = context.scene
         faceprops = scene.face_props
         col = self.layout.column(align=True)
-        col.prop(faceprops, "gd_bin_file")
+        col.prop(faceprops, "gd_work_dir")
+        col.prop(faceprops, "gd_face_name")
         prop = col.operator(ImportFaceButton.bl_idname, text="Import Mario Face")
-        col.prop(faceprops, "gd_out_file")
         prop = col.operator(ExportFaceButton.bl_idname, text="Export Mario Face")
+        col.prop(faceprops, "debug_bone_name")
+        prop = col.operator(DebugBoneButton.bl_idname, text="Debug Print Bone Data")
 
 
 classes = [
     ImportFaceButton,
     ExportFaceButton,
+    DebugBoneButton,
     FaceProperties,
     PANEL_PT_GoddardSidebar,
 ]

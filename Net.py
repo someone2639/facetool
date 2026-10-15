@@ -7,5 +7,4 @@ class Net:
         self.name = name
         self.type = 0
         self.shape = 0
-        self.bone = None
-        self.mesh = None
+        self.position = [0, 0, 0]

@@ -1,103 +1,49 @@
-from .commands import DLCmd
-from .node_types import *
-from .main import readDL
-from .Shape import Shape, constructShape, matGroups
-from .Joint import Joint
-from .Animation import parseAnimation
-from .Net import Net
 import bpy
-import math
-from mathutils import Euler, Vector, Matrix
+from mathutils import Euler, Matrix, Vector
 
+from .Animation import parseAnimation
+from .commands import DLCmd
+from .constants import DYNOBJ_MARIO_MAIN_NET, ROOT_ANIMATOR_NAME, DYNOBJ_MARIO_MAIN_SHAPES_GROUP
+from .Face import Face
 from .GMaterial import GMaterial
+from .Joint import Joint
+from .Net import Net
+from .node_types import *
+from .Shape import Shape, constructShape
 from .utils import (
-    editmode,
-    posemode,
-    objectmode,
-    vec_deg2rad,
-    vec_rad2deg,
     JOINT_ROTATION_MODE,
+    vec_deg2rad,
+    base_rotation_coord_space_correction,
+    rotation_coord_space_correction,
+    position_coord_space_correction,
+    angle_wrap_deg,
 )
+from .Scene import Scene
 
-dataGrpMap = {}
-shapeMap = {}
-vtxGroups = {}
-objMap = {}
-jointMap = {}
+current_object_pos = [0, 0, 0]
+stashed_object_pos = [0, 0, 0]
 
+def stash_obj_pos():
+    global stashed_object_pos
+    global current_object_pos
+    stashed_object_pos = current_object_pos
 
-def addRootAnimator():
-    global objMap
-    bpy.ops.object.armature_add(
-        enter_editmode=False, align="WORLD", location=(0, 0, 0), scale=(1, 1, 1)
-    )
-    armature = bpy.context.object
-    objMap[1001] = armature
-    scene = bpy.context.scene
-    scene.collection.objects.link(armature)
-    editmode(armature)
-    armature.name = "Root_Animator_1001"
-    bone0 = armature.data.edit_bones[-1]
-    bone0.name = "Joint_1001"
-    bone0.head = (0, 0, 0)
-    bone0.tail = (0, 0, 10)
-    objectmode()
-    bpy.data.objects["Root_Animator_1001"].show_in_front = True
+def unstash_obj_pos():
+    global stashed_object_pos
+    global current_object_pos
+    current_object_pos = stashed_object_pos
 
+def set_current_obj_pos(pos):
+    global current_object_pos
+    current_object_pos = pos
 
-def addBone(name: str, orient: bool):
-    armature = bpy.data.objects.get("Root_Animator_1001")
-    editmode(armature)
-    bpy.ops.armature.bone_primitive_add()
-    new_bone = armature.data.edit_bones[-1]
-    new_bone.name = name
-    new_bone.use_deform = True
-    objectmode()
-    if orient:
-        posemode(armature)
-        bpy.data.objects["Root_Animator_1001"].pose.bones[name].rotation_mode = JOINT_ROTATION_MODE
-        objectmode()
-    return new_bone
+def get_world_pos() -> list[float]:
+    global current_object_pos
+    return current_object_pos
 
-
-def parent_bone(name: int, parent_name: int):
-    armature = bpy.data.objects.get("Root_Animator_1001")
-    editmode(armature)
-    bone = armature.data.edit_bones.get(f"Joint_{name}")
-    pbone = armature.data.edit_bones.get(f"Joint_{parent_name}")
-    if pbone:
-        bone.parent = pbone
-    objectmode()
-
-
-def position_bone(boneName, position, rotation_deg):
-    # print("position_bone",boneName,position,rotation_deg)
-    armature = bpy.data.objects.get("Root_Animator_1001")
-    editmode(armature)
-    bone = armature.data.edit_bones.get(f"Joint_{boneName}")
-    bone.head = (0, 0, 0)
-    bone.tail = (0, 0, 100)
-
-    R = Matrix.LocRotScale(
-        position,
-        None,
-        # Euler(vec_deg2rad(rotation_deg), JOINT_ROTATION_MODE),
-        None,
-    )
-
-    bone.transform(R)
-    objectmode()
-
-
-def parseDL(cmdList):
-    global objMap
-    global shapeMap
-    global dataGrpMap
-    global matGroups
-    global vtxGroups
-    global jointMap
+def parseDL(face: Face, name: str, root: bool = False):
     curObjType = 0
-    curObjName = 0
+    curObjName = "0"
     subGroupName = 0
     curSkinShape = 0
 
@@ -105,242 +51,183 @@ def parseDL(cmdList):
 
     curEmpty = None
 
-    jointMap = {}
-    animMap = {}
-    netMap = {}
+    scene = Scene()
 
     rootNet = 0
     iAM_MODIFYING_THE_SUBGROUP = False
 
+    cmdList = face.dynlists[name]
+
+    scene = Scene()
+
     for cmd in cmdList:
         match cmd.type:
             case DLCmd.CallList:
-                tmpList = readDL(cmd.arg1)
-                parseDL(tmpList)
+                parseDL(face, cmd.arg1)
             case DLCmd.MakeDynObj:
                 curObjType = cmd.arg2
                 curObjName = cmd.arg1
                 match curObjType:
-                    case DNode.D_DATA_GRP:
-                        dataGrpMap[curObjName] = []
-                    case DNode.D_NET:
-                        jointMap[curObjName] = Joint(curObjName)
-                        jointMap[curObjName].name = curObjName
-                        jointMap[curObjName].bone = addBone(
-                            f"Joint_{curObjName}", False
-                        )
-                        netMap[curObjName] = Net(curObjName)
+                    case "D_DATA_GRP":
+                        scene.dataGroups[curObjName] = []
+                    case "D_NET":
+                        scene.joints[curObjName] = Joint(curObjName)
+                        scene.joints[curObjName].name = curObjName
+                        scene.nets[curObjName] = Net(curObjName)
 
                         # Parent the animated bones to the root bone
                         if rootNet == 0:
                             rootNet = curObjName
-                            parent_bone(curObjName, 1001)
-                            jointMap[curObjName].parent = 0
-                    case DNode.D_SHAPE:
-                        shapeMap[curObjName] = Shape(curObjName, 0, 0, 0)
-                        mesh = bpy.data.meshes.new(f"Shape_{curObjName}_mesh")
-                        obj = bpy.data.objects.new(f"Shape_{curObjName}", mesh)
-                        scene = bpy.context.scene
-                        scene.collection.objects.link(obj)
-                        bpy.context.view_layer.objects.active = obj
-                        objMap[curObjName] = obj
-                        obj.location[0] = 0
-                        obj.location[1] = 0
-                        obj.location[2] = 0
-                        # obj.rotation_euler[0] = math.pi / 2
-                        # obj.rotation_euler[2] = math.pi
-                        obj.parent = bpy.data.objects["Root_Animator_1001"]
-                    case DNode.D_ANIMATOR:
+                            scene.joints[curObjName].parent = 0
+                    case "D_SHAPE":
+                        scene.shapes[curObjName] = Shape(curObjName, 0, 0, 0)
+                    case "D_ANIMATOR":
                         pass
-                    case DNode.D_MATERIAL:
-                        matGroups[curMatGroup].append((GMaterial()))
+                    case "D_MATERIAL":
+                        scene.materials[curMatGroup].append(GMaterial())
             case DLCmd.LinkWithPtr:
-                dataGrpMap[curObjName].append(cmd.arg1)
+                scene.dataGroups[curObjName].append(cmd.arg1)
             case DLCmd.SetType:
                 # Type 2 is a root net?
                 # type 3 is a sub net?
-                netMap[curObjName].type = cmd.arg2
+                # TODO: make an enum in branch
+                scene.nets[curObjName].type = int(cmd.arg2)
             case DLCmd.SetNodeGroup:
-                if curObjType == DNode.D_SHAPE:
-                    shapeMap[curObjName].verts = dataGrpMap[cmd.arg1][0]
-                elif curObjType == DNode.D_ANIMATOR:
-                    animMap[curObjName] = dataGrpMap[cmd.arg1][0]
+                if curObjType == "D_SHAPE":
+                    scene.shapes[curObjName].verts = scene.dataGroups[cmd.arg1][0].replace(
+                        "&", ""
+                    )
+                elif curObjType == "D_ANIMATOR":
+                    scene.animations[curObjName] = scene.dataGroups[cmd.arg1][0].replace("&", "")
             case DLCmd.SetPlaneGroup:
-                if curObjType == DNode.D_SHAPE:
-                    shapeMap[curObjName].faces = dataGrpMap[cmd.arg1][0]
+                if curObjType == "D_SHAPE":
+                    scene.shapes[curObjName].faces = scene.dataGroups[cmd.arg1][0].replace(
+                        "&", ""
+                    )
             case DLCmd.SetMaterialGroup:
-                if curObjType == DNode.D_SHAPE:
-                    shapeMap[curObjName].materials = cmd.arg1
+                if curObjType == "D_SHAPE":
+                    scene.shapes[curObjName].materials = cmd.arg1.replace("&", "")
             case DLCmd.EndList:
                 pass
             case DLCmd.SetScale:
                 # dont have to impl on the importer since always [1,1,1]
                 pass
             case DLCmd.SetRotation:
-                jointMap[curObjName].rotation = cmd.vec
-            case DLCmd.SetAttachOffset:
-                if jointMap[curObjName].parent in jointMap:
-                    parentpos = [
-                        j for j in jointMap[jointMap[curObjName].parent].position
-                    ]
-                    parentpos[0] += cmd.vec[0]
-                    parentpos[1] += cmd.vec[1]
-                    parentpos[2] += cmd.vec[2]
-                    position_bone(curObjName, parentpos, [0, 0, 0])
-                else:
-                    position_bone(curObjName, cmd.vec, jointMap[curObjName].rotation)
-                if iAM_MODIFYING_THE_SUBGROUP:
-                    # subgrot = Matrix.LocRotScale(
-                    #     jointMap[subGroupName].position,
-                    #     Euler(vec_deg2rad(jointMap[subGroupName].rotation), JOINT_ROTATION_MODE),
-                    #     None
-                    # )
+                cur_rotation = rotation_coord_space_correction(cmd.vec)
 
-                    # finalmtx = Matrix.Translation(cmd.vec) @ subgrot
-                    # jointMap[curObjName].position = finalmtx.to_translation()
-                    # print(f"Using matrix math to set Joint_{curObjName} to {jointMap[curObjName].position}")
-                    # print(f"btw the matrix was {finalmtx}")
-                    jointMap[subGroupName].position = cmd.vec
-                    # print(f"Set SubJoint_{subGroupName} to pos {cmd.vec}")
-                    position_bone(
-                        subGroupName,
-                        jointMap[subGroupName].position,
-                        jointMap[subGroupName].rotation,
-                    )
+                scene.joints[curObjName].rotation = cur_rotation
+            case DLCmd.SetAttachOffset:
+                if curObjType == "D_NET":
+                    scene.nets[curObjName].position = position_coord_space_correction(cmd.vec)
+                if scene.joints[curObjName].parent in scene.joints:
+                    parentpos = [
+                        j for j in scene.joints[scene.joints[curObjName].parent].position
+                    ]
+                    parentpos = [a + b for a, b in zip(parentpos, position_coord_space_correction(cmd.vec))]
+                    scene.joints[curObjName].position = parentpos
+                else:
+                    scene.joints[curObjName].position = position_coord_space_correction(cmd.vec)
+                if iAM_MODIFYING_THE_SUBGROUP:
+                    scene.joints[subGroupName].position = position_coord_space_correction(cmd.vec)
                 else:
                     if cmd.vec == [0, 0, 0] and subGroupName != 0:
-                        jointMap[curObjName].position = jointMap[subGroupName].position
+                        scene.joints[curObjName].position = scene.joints[subGroupName].position
                     else:
-                        jointMap[curObjName].position = cmd.vec
-                    position_bone(
-                        curObjName,
-                        jointMap[curObjName].position,
-                        jointMap[curObjName].rotation,
-                    )
+                        scene.joints[curObjName].position = position_coord_space_correction(cmd.vec)
             case DLCmd.AttachTo:
-                if curObjType != DNode.D_ANIMATOR:
+                if curObjType != "D_ANIMATOR":
                     if subGroupName != 0:
-                        print(f"Attaching subgroup {subGroupName} to {cmd.arg1}...")
-                        parent_bone(subGroupName, cmd.arg1)
-                        jointMap[subGroupName].parent = cmd.arg1
+                        print(f"{curObjType} Attaching subgroup {subGroupName} to {cmd.arg1}...")
+                        # parent_joint(subGroupName, cmd.arg1)
+                        scene.joints[subGroupName].parent = cmd.arg1
                     else:
                         print(f"Attaching {curObjName} to {cmd.arg1}...")
-                        parent_bone(curObjName, cmd.arg1)
-                        jointMap[curObjName].parent = cmd.arg1
-                if curObjType == DNode.D_NET:
-                    if netMap[curObjName].type == 3:
-                        obj = bpy.data.objects[netMap[curObjName].shape]
-
-                        jointToCopy = jointMap[cmd.arg1]
-                        print(f"Setting {curObjName} to {jointToCopy.position}")
-
-                        obj.rotation_euler = Euler(jointToCopy.rotation, JOINT_ROTATION_MODE)
-                        if jointToCopy.name != 221:
-                            # Don't set a net to -20010
-                            obj.location = jointToCopy.position
-                        else:
-                            obj.location = (0, 0, 0)
-                        mesh = bpy.data.meshes[f"{netMap[curObjName].shape}_mesh"]
-                        rootgroup = obj.vertex_groups.new(name=f"Joint_{cmd.arg1}")
-                        all_indices = [v.index for v in mesh.vertices]
-                        rootgroup.add(all_indices, 1.0, "REPLACE")
-                        mod = obj.modifiers.new("Armature_Root", "ARMATURE")
-                        mod.object = bpy.data.objects["Root_Animator_1001"]
-                        mod.vertex_group = f"Joint_{cmd.arg1}"
+                        parent_joint(curObjName, cmd.arg1)
+                        scene.joints[curObjName].parent = cmd.arg1
+                # TODO: REDO D_JOINT anD D_NET
             case DLCmd.LinkWith:
                 boneID = cmd.arg1
-                if boneID == 221:
-                    boneID = 1001
-                if boneID in jointMap:
-                    parseAnimation(
-                        jointMap[boneID].rotation, boneID, animMap[curObjName]
-                    )
-                else:
-                    parseAnimation([0, 0, 0], boneID, animMap[curObjName])
-                objectmode()
+                if boneID == DYNOBJ_MARIO_MAIN_NET:
+                    boneID = ROOT_ANIMATOR_NAME
+                if boneID in scene.joints:
+                    scene.joints[boneID].animation = scene.animations[curObjName]
             case DLCmd.MakeNetWithSubGroup:
                 iAM_MODIFYING_THE_SUBGROUP = True
                 subGroupName = cmd.arg1
-                jointMap[subGroupName] = Joint(subGroupName)
-                jointMap[subGroupName].bone = addBone(f"Joint_{subGroupName}", True)
+                scene.joints[subGroupName] = Joint(subGroupName)
+                # scene.joints[subGroupName].bone = new_joint(f"Joint_{subGroupName}", True)
+                # curObjType = "D_JOINT"
             case DLCmd.EndNetWithSubGroup:
                 subGroupName = 0
                 curSkinShape = 0
             case DLCmd.MakeAttachedJoint:
-                if (
-                    iAM_MODIFYING_THE_SUBGROUP
-                ):  # Only 1 joint can be in a subgroup at a time?
+                if iAM_MODIFYING_THE_SUBGROUP:
+                    # Only 1 joint can be in a subgroup at a time?
                     iAM_MODIFYING_THE_SUBGROUP = False
 
-                curObjType = DNode.D_JOINT
+                curObjType = "D_JOINT"
                 curObjName = cmd.arg1
-                jointMap[curObjName] = Joint(curObjName)
-                jointMap[curObjName].name = curObjName
+                scene.joints[curObjName] = Joint(curObjName)
+                scene.joints[curObjName].name = curObjName
                 # override the vtx group
-                vtxGroups[curSkinShape] = objMap[curSkinShape].vertex_groups.new(
-                    name=f"Joint_{curObjName}"
-                )
-                mesh = bpy.data.meshes[f"Shape_{curSkinShape}_mesh"]
-                editmode(objMap[curSkinShape])
-                for v in mesh.vertices:
-                    for g in v.groups:
-                        g.weight = 0.0
-                objectmode()
-                jointMap[curObjName].bone = addBone(f"Joint_{curObjName}", False)
-                parent_bone(curObjName, subGroupName)
-                jointMap[curObjName].parent = subGroupName
+                # scene.vtxGroups[curSkinShape] = scene.objects[curSkinShape].vertex_groups.new(
+                #     name=f"Joint_{curObjName}"
+                # )
+                # clear_object_weights(scene.objects[curSkinShape])
+                # scene.joints[curObjName].bone = new_joint(f"Joint_{curObjName}", False)
+                # parent_joint(curObjName, subGroupName)
+                scene.joints[curObjName].parent = subGroupName
             case DLCmd.SetShapePtr:
-                if cmd.arg1 in shapeMap:
-                    constructShape(cmd.arg1, shapeMap[cmd.arg1])
-                    o = bpy.data.objects[f"Shape_{cmd.arg1}"]
-                    mesh = bpy.data.meshes[f"Shape_{cmd.arg1}_mesh"]
-                    rootgroup = objMap[cmd.arg1].vertex_groups.new(name=f"Joint_1001")
-                    all_indices = [v.index for v in mesh.vertices]
-                    rootgroup.add(all_indices, 0.5, "REPLACE")
-                    mod = o.modifiers.new("Armature_Root", "ARMATURE")
-                    mod.object = bpy.data.objects["Root_Animator_1001"]
-                    mod.vertex_group = "Joint_1001"
-                if curObjType == DNode.D_NET:
-                    netMap[curObjName].shape = f"Shape_{cmd.arg1}"
+                # if cmd.arg1 in scene.shapes:
+                    # constructShape(face, cmd.arg1, scene.shapes[cmd.arg1])
+                    # o = bpy.data.objects[f"Shape_{cmd.arg1}"]
+                    # mesh = bpy.data.meshes[f"Shape_{cmd.arg1}_mesh"]
+                    # rootgroup = scene.objects[cmd.arg1].vertex_groups.new(
+                    #     name=f"Joint_{ROOT_ANIMATOR_NAME}"
+                    # )
+                    # all_indices = [v.index for v in mesh.vertices]
+                    # rootgroup.add(all_indices, 0.5, "REPLACE")
+                    # mod = o.modifiers.new("Armature_Root", "ARMATURE")
+                    # mod.object = bpy.data.objects[ROOT_ANIMATOR_NAME]
+                    # mod.vertex_group = f"Joint_{ROOT_ANIMATOR_NAME}"
+                if curObjType == "D_NET":
+                    scene.nets[curObjName].shape = f"Shape_{cmd.arg1}"
             case DLCmd.SetSkinShape:
                 curSkinShape = cmd.arg1
-                o = bpy.data.objects[f"Shape_{curSkinShape}"]
+                # o = bpy.data.objects[f"Shape_{curSkinShape}"]
 
-                mod = o.modifiers.new(f"Armature_{curSkinShape}", "ARMATURE")
-                mod.object = bpy.data.objects["Root_Animator_1001"]
+                # mod = o.modifiers.new(f"Armature_{curSkinShape}", "ARMATURE")
+                # mod.object = get_root_animator()
 
-                vtxGroups[curSkinShape] = objMap[curSkinShape].vertex_groups.new(
-                    name=f"Joint_{subGroupName}"
-                )
-                editmode(objMap[curSkinShape])
-                mesh = bpy.data.meshes[f"Shape_{curSkinShape}_mesh"]
-                for v in mesh.vertices:
-                    for g in v.groups:
-                        g.weight = 0.0
-                mod.vertex_group = f"Joint_{curObjName}"
-                objectmode()
+                # scene.vtxGroups[curSkinShape] = scene.objects[curSkinShape].vertex_groups.new(
+                #     name=f"Joint_{subGroupName}"
+                # )
+                # clear_object_weights(scene.objects[curSkinShape])
+                # mod.vertex_group = f"Joint_{curObjName}"
+                # objectmode()
             case DLCmd.SetSkinWeight:
                 # Add this weight to the vertex group
-                group = vtxGroups[curSkinShape]
-                group.add([cmd.arg2], cmd.vec[0] / 100.0, "REPLACE")
+                group = scene.vtxGroups[curSkinShape]
+                group.add([int(cmd.arg2)], cmd.vec[0] / 100.0, "REPLACE")
             case DLCmd.StartGroup:
-                if cmd.arg1 != 1000 and cmd.arg1 != 1:
+                if cmd.arg1 != DYNOBJ_MARIO_MAIN_SHAPES_GROUP and cmd.arg1 != 1:
                     curMatGroup = cmd.arg1
-                    matGroups[curMatGroup] = []
+                    scene.materials[curMatGroup] = []
             case DLCmd.SetId:
-                if curObjType == DNode.D_MATERIAL:
-                    matGroups[curMatGroup][-1].matId = cmd.arg1
+                if curObjType == "D_MATERIAL":
+                    scene.materials[curMatGroup][-1].matId = cmd.arg1
             case DLCmd.SetAmbient:
-                if curObjType == DNode.D_MATERIAL:
-                    matGroups[curMatGroup][-1].ambient = cmd.vec + [1.0]
+                if curObjType == "D_MATERIAL":
+                    scene.materials[curMatGroup][-1].ambient = cmd.vec + [1.0]
             case DLCmd.SetDiffuse:
-                if curObjType == DNode.D_MATERIAL:
-                    matGroups[curMatGroup][-1].diffuse = cmd.vec + [1.0]
+                if curObjType == "D_MATERIAL":
+                    scene.materials[curMatGroup][-1].diffuse = cmd.vec + [1.0]
             # case DLCmd.SetTexturePath:
-            #     matGroups[curMatGroup][-1].matId = cmd.arg1
+            #     scene.materials[curMatGroup][-1].matId = cmd.arg1
             case DLCmd.EndGroup:
                 curMatGroup = 0
             case _:
                 pass
-    # if 221 in objMap:
-    #     objMap[221].rotation_euler = (math.radians(90), 0, 0)
+    return 820
+    # if DYNOBJ_MARIO_MAIN_NET in scene.objects:
+    #     scene.objects[DYNOBJ_MARIO_MAIN_NET].rotation_euler = (math.radians(90), 0, 0)

@@ -1,14 +1,19 @@
 import bpy
 import math
 import mathutils
-from .main import readStruct
+from .constants import ROOT_ANIMATOR_NAME
 from itertools import zip_longest
 from mathutils import Euler, Matrix
-from .utils import (
+from .blender_helpers import (
     editmode,
     posemode,
     objectmode,
+    get_root_animator,
+)
+from .utils import (
+    base_rotation_coord_space_correction,
     rotation_coord_space_correction,
+    position_coord_space_correction,
     vec_deg2rad,
     JOINT_ROTATION_MODE,
     angle_wrap_deg,
@@ -60,15 +65,16 @@ def set_local_rotation(obj, value):
 
 
 def choose_coord_space(boneID: int, vec: list[float]) -> list[float]:
-    if boneID == 1001:
-        return vec
+    if boneID == ROOT_ANIMATOR_NAME:
+        return base_rotation_coord_space_correction(vec)
     else:
-        return coord_space_correction(vec)
+        return rotation_coord_space_correction(vec)
+
 
 def LinkAnimation(baserot, boneID, action, rotation, position):
     action_name = f"FaceAction_{action}"
     action = bpy.data.actions.get(action_name)
-    armature = bpy.data.objects.get("Root_Animator_1001")
+    armature = get_root_animator()
 
     base_rotation = baserot
     editmode(armature)
@@ -90,18 +96,20 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
     # Step 3: Apply Transformations (position or rotation)
     if len(rotation) > 0:
         posemode(armature)
-        bpy.data.objects["Root_Animator_1001"].pose.bones[
+        get_root_animator().pose.bones[
             f"Joint_{boneID}"
         ].rotation_mode = JOINT_ROTATION_MODE
         objectmode()
     for frame, (rot, pos) in enumerate(rotposzip(rotation, position)):
         if rot:
-            cur_rotation = [angle / 10.0 for angle in rotation_coord_space_correction(rot)]
+            cur_rotation = [
+                angle / 10.0 for angle in choose_coord_space(boneID, rot)
+            ]
 
             # cur_rotation[2] *= -1
 
-            if frame == 0:
-                print(f"{boneID}: Cur_rot {cur_rotation} Base {base_rotation}")
+            # if frame == 0:
+            #     print(f"{boneID}: Cur_rot {cur_rotation} Base {base_rotation}")
 
             cur_rotation[0] -= base_rotation[0]
             cur_rotation[1] -= base_rotation[1]
@@ -114,52 +122,41 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
             cur_rotation[2] /= 2.0
             angle_wrap_deg(cur_rotation, 180.0)
 
-
             cur_rotation_rad = Euler(vec_deg2rad(cur_rotation), JOINT_ROTATION_MODE)
-
             bone.rotation_euler = cur_rotation_rad
             bone.keyframe_insert(data_path="rotation_euler", frame=frame, index=-1)
 
         if pos:
-            bone.location = [p / 10.0 for p in pos]
+            curr_pos = position_coord_space_correction([p / 10.0 for p in pos])
+            bone.location = curr_pos
             bone.keyframe_insert(data_path="location", frame=frame, index=-1)
         # else:
         #     bone.location = (0, 0, 0)
         #     bone.keyframe_insert(data_path="location", frame=frame, index=-1)
     objectmode()
 
+
 # Anim data format:
 #  s32 count (-1 if done, 0 if empty)
 #  u32 dataType (use the lookup struct)
 #  u32 address
-def parseAnimation(baseRot, jointID, offset):
-    animdata = []
-    animdata.append(readStruct(">lLL", offset))
-    offset += 12
-    while animdata[-1][0] != -1:
-        animdata.append(readStruct(">lLL", offset))
-        offset += 12
-    for i, a in enumerate(animdata):
-        (a_count, a_type, a_offset) = a
-        if a_count == -1:
+def parseAnimation(face, baseRot, jointID, animInfoName):
+    for i, a in enumerate(face.animinfos[animInfoName]):
+        (_, a_type, anim_name) = a
+        if a_type == "GD_ANIM_EMPTY":
             break
+
         makeAction(i)
         animPos = []
         animRot = []
 
-        for j in range(a_count):
-            structLookup = animLookup[a_type]
-            if a_type == GDAnimType.ROT3S:
-                animRot.append(
-                    rotation_coord_space_correction(readStruct(structLookup, a_offset))
-                )
-                a_offset += 6
-            elif a_type == GDAnimType.POS3S:
-                animPos.append(readStruct(structLookup, a_offset))
-                a_offset += 6
-            elif a_type == GDAnimType.ROT3S_POS3S:
-                vals = readStruct(structLookup, a_offset)
-                animRot.append(rotation_coord_space_correction(vals[0:3]))
-                animPos.append(vals[3:6])
-                a_offset += 12
+        for frame in face.animdatas[anim_name]:
+            match a_type:
+                case "GD_ANIM_ROT3S":
+                    animRot.append(frame)
+                case "GD_ANIM_POS3S":
+                    animPos.append(frame)
+                case "GD_ANIM_ROT3S_POS3S":
+                    animRot.append(frame[0:3])
+                    animPos.append(frame[3:6])
         LinkAnimation(baseRot, jointID, i, animRot, animPos)

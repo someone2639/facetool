@@ -1,5 +1,3 @@
-matGroups = {}
-
 
 class GMaterial:
     def __init__(self):

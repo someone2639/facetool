@@ -1,0 +1,144 @@
+import os
+import re
+import struct
+
+from .commands import Command, CommandToArguments, CommandToDLCmd, DLCmd
+
+regexes: dict[str, str] = {
+    r"s16\sanimdata_(\w+)\[\]\[(\d+)\]": "animdata",
+    r"s16\sanim_(\w+)\[\]\[(\d+)\]": "animdata2",
+    r"struct\sAnimDataInfo\sanim_(\w+)": "animinfo",
+    r"s16\sverts_(\w+)\[\]\[(\d+)\]": "vtxdata",
+    r"s16\s(\w+)_VtxData\[\]\[(\d+)\]": "vtxdata2",
+    r"struct\sGdVtxData\s(\w+)": "vtxinfo",
+    r"u16\sfacedata_(\w+)\[\]\[(\d+)\]": "facedata",
+    r"u16\s(\w+)_FaceData\[\]\[(\d+)\]": "facedata2",
+    r"struct\sGdFaceData\s(\w+)": "faceinfo",
+    r"struct\sDynList\s(\w+)\[": "dynlist",
+}
+
+def readDynLists(folder_path: str) -> dict[str, list[str]]:
+    file_data = {}
+
+    for _, _, files in os.walk(folder_path):
+        for file in files:
+            _, ext = os.path.splitext(file)
+            if ext != ".c":
+                continue
+
+            with open(f"{folder_path}/{file}", "r") as f:
+                file_data[file] = f.readlines()
+
+    return file_data
+
+def findEndLine(data: list[str], startline: int) -> int:
+    for i, line in enumerate(data[startline:]):
+        if line.strip() == "};":
+            return startline + i
+    return -1
+
+def parseDynlist(data: list[str], startline: int) -> list[Command]:
+    cmd_list = [i.strip() for i in data[startline:findEndLine(data, startline)]]
+    ret_commands = []
+
+    for cmd in cmd_list:
+        tokens = cmd.replace("(", " ").replace(")", " ").replace(",", " ").split()
+        if len(tokens) > 0 and tokens[0] in CommandToDLCmd.keys():
+            cmdname = tokens[0]
+            cmdtype = CommandToDLCmd[cmdname]
+            cmdargs = CommandToArguments[cmdname]
+            ret_commands.append(Command(cmdtype, cmdargs, tokens[1:]))
+
+    return ret_commands
+
+def parseData(data: list[str], startline: int, datawidth: int) -> list[list[float]]:
+    retvalues = []
+
+    for parsedline in data[startline:findEndLine(data, startline)]:
+        values = [int(i) for i in 
+            parsedline.replace(",", " ").replace("{", " ").replace("}", " ").split()
+        ]
+        retvalues += [
+            values[i : i + datawidth] for i in range(0, len(values), datawidth)
+        ]
+
+    return retvalues
+
+def parseInfo(data: list[str], startline: int, num_lines: int):
+    datapattern = r"ARRAY_COUNT\((\w+)\),\s(\w+),\s(\w+)"
+    retinfo = []
+
+    for i in range(num_lines):
+        match = re.search(datapattern, data[startline + i])
+        if match:
+            retinfo += [match.groups()]
+    return retinfo
+
+def parseAnimInfo(data: list[str], startline: int):
+    datapattern = r"ARRAY_COUNT\((\w+)\),\s(\w+),\s(\w+)"
+    datapattern2 = r"0,\sGD_ANIM_EMPTY,\sNULL"
+    retinfo = []
+    num_lines = findEndLine(data, startline) - startline
+
+    for i in range(num_lines):
+        match = re.search(datapattern, data[startline + i])
+        if match:
+            retinfo += [match.groups()]
+        match = re.search(datapattern2, data[startline + i])
+        if match:
+            retinfo += [["0", "GD_ANIM_EMPTY", "NULL"]]
+    return retinfo
+
+def __init__(self, folder_path: str):
+    file_data = readDynLists(folder_path)
+    self.file_map = {}
+    self.dynlists = {}
+    self.vtxdatas = {}
+    self.facedatas = {}
+    self.animdatas = {}
+
+    self.vtxinfos = {}
+    self.faceinfos = {}
+    self.animinfos = {}
+
+    for filename in file_data:
+        self.file_map[filename] = []
+        file = file_data[filename]
+        for i, line in enumerate(file):
+            for reg in regexes:
+                match = re.search(reg, line)
+                if match:
+                    params = match.groups()
+
+                    match regexes[reg]:
+                        case "vtxinfo":
+                            self.vtxinfos[params[0]] = parseInfo(file, i, 1)[0]
+                            self.file_map[filename].append(params[0])
+                        case "faceinfo":
+                            self.faceinfos[params[0]] = parseInfo(file, i, 1)[0]
+                            self.file_map[filename].append(params[0])
+                        case "animinfo":
+                            self.animinfos[f"anim_{params[0]}"] = parseAnimInfo(file, i)
+                            self.file_map[filename].append(f"anim_{params[0]}")
+                        case "vtxdata":
+                            self.vtxdatas[f"verts_{params[0]}"] = parseData(file, i + 1, 3)
+                            self.file_map[filename].append(f"verts_{params[0]}")
+                        case "vtxdata2":
+                            self.vtxdatas[f"{params[0]}_VtxData"] = parseData(file, i + 1, 3)
+                            self.file_map[filename].append(f"{params[0]}_VtxData")
+                        case "facedata":
+                            self.facedatas[f"facedata_{params[0]}"] = parseData(file, i + 1, 4)
+                            self.file_map[filename].append(f"facedata_{params[0]}")
+                        case "facedata2":
+                            self.facedatas[f"{params[0]}_FaceData"] = parseData(file, i + 1, 4)
+                            self.file_map[filename].append(f"{params[0]}_FaceData")
+                        case "animdata":
+                            self.animdatas[f"animdata_{params[0]}"] = parseData(file, i + 1, int(params[1]))
+                            self.file_map[filename].append(f"animdata_{params[0]}")
+                        case "animdata2":
+                            self.animdatas[f"anim_{params[0]}"] = parseData(file, i + 1, int(params[1]))
+                            self.file_map[filename].append(f"anim_{params[0]}")
+                        case "dynlist":
+                            self.dynlists[params[0]] = parseDynlist(file, i)
+                            self.file_map[filename].append(params[0])
+
