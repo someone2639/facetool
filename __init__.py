@@ -90,9 +90,8 @@ class ImportFaceButton(Operator):
         if workdir and os.path.isdir(workdir):
             make_root_animator()
             goddard_data["face"] = Face(workdir)
-            end_frame = parseDL(goddard_data["face"], face_name)
-            bpy.context.scene.frame_end = end_frame
-            delete_unused_bones()
+            scene = parseDL(goddard_data["face"], face_name, root = True)
+            bpy.context.scene.frame_end = scene.end_frame
             return {"FINISHED"}
         else:
             self.report({"ERROR"}, "No import file specified!")

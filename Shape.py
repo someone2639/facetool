@@ -1,6 +1,5 @@
 import bpy
 import bmesh
-from .GMaterial import matGroups
 from .utils import position_coord_space_correction
 
 
@@ -11,18 +10,7 @@ class Shape:
         self.faces = faces
         self.mats = mats
 
-
-def add_mesh(m, verts, faces, col_name="Collection"):
-    mesh = m
-    obj = bpy.data.objects.new(mesh.name, mesh)
-    col = bpy.data.collections[col_name]
-    col.objects.link(obj)
-    bpy.context.view_layer.objects.active = obj
-    mesh.from_pydata(verts, [], faces)
-
-def registerMats(obj, matID):
-    mats = matGroups[matID]
-
+def registerMats(obj, mats):
     for i, m in enumerate(mats):
         new_mat = bpy.data.materials.new(f"GDMaterial_Group{matID}_{i}")
         new_mat.use_nodes = True
@@ -46,7 +34,7 @@ def constructShape(face, oId, shape):
         [i[1:4] for i in face.facedatas[face.faceinfos[shape.faces][0]]]
     )
     print(f"after meshing {oId}")
-    registerMats(bpy.data.objects[f"Shape_{oId}"], shape.materials)
+    # registerMats(bpy.data.objects[f"Shape_{oId}"], shape.materials)
     matIndices = [i[0] for i in face.facedatas[face.faceinfos[shape.faces][0]]]
     for i, f in enumerate(mesh.polygons):
         f.material_index = matIndices[i]
