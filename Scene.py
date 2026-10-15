@@ -32,6 +32,16 @@ class Scene():
         self.materials = {}
         self.dataGroups = {}
 
+    def update(self, newscene):
+        self.objects.update(newscene.objects)
+        self.shapes.update(newscene.shapes)
+        self.joints.update(newscene.joints)
+        self.animations.update(newscene.animations)
+        self.nets.update(newscene.nets)
+        self.materials.update(newscene.materials)
+        self.dataGroups.update(newscene.dataGroups)
+
+
     def build(self):
         pass
 

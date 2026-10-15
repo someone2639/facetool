@@ -63,7 +63,8 @@ def parseDL(face: Face, name: str, root: bool = False):
     for cmd in cmdList:
         match cmd.type:
             case DLCmd.CallList:
-                parseDL(face, cmd.arg1)
+                newscene = parseDL(face, cmd.arg1)
+                scene.update(newscene)
             case DLCmd.MakeDynObj:
                 curObjType = cmd.arg2
                 curObjName = cmd.arg1
@@ -142,7 +143,7 @@ def parseDL(face: Face, name: str, root: bool = False):
                         scene.joints[subGroupName].parent = cmd.arg1
                     else:
                         print(f"Attaching {curObjName} to {cmd.arg1}...")
-                        parent_joint(curObjName, cmd.arg1)
+                        # parent_joint(curObjName, cmd.arg1)
                         scene.joints[curObjName].parent = cmd.arg1
                 # TODO: REDO D_JOINT anD D_NET
             case DLCmd.LinkWith:
@@ -206,9 +207,10 @@ def parseDL(face: Face, name: str, root: bool = False):
                 # mod.vertex_group = f"Joint_{curObjName}"
                 # objectmode()
             case DLCmd.SetSkinWeight:
+                pass
                 # Add this weight to the vertex group
-                group = scene.vtxGroups[curSkinShape]
-                group.add([int(cmd.arg2)], cmd.vec[0] / 100.0, "REPLACE")
+                # group = scene.vtxGroups[curSkinShape]
+                # group.add([int(cmd.arg2)], cmd.vec[0] / 100.0, "REPLACE")
             case DLCmd.StartGroup:
                 if cmd.arg1 != DYNOBJ_MARIO_MAIN_SHAPES_GROUP and cmd.arg1 != 1:
                     curMatGroup = cmd.arg1
@@ -228,6 +230,8 @@ def parseDL(face: Face, name: str, root: bool = False):
                 curMatGroup = 0
             case _:
                 pass
-    return 820
+
+    scene.end_frame = 820
+    return scene
     # if DYNOBJ_MARIO_MAIN_NET in scene.objects:
     #     scene.objects[DYNOBJ_MARIO_MAIN_NET].rotation_euler = (math.radians(90), 0, 0)
