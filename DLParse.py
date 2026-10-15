@@ -138,11 +138,9 @@ def parseDL(face: Face, name: str, root: bool = False):
             case DLCmd.AttachTo:
                 if curObjType != "D_ANIMATOR":
                     if subGroupName != 0:
-                        print(f"{curObjType} Attaching subgroup {subGroupName} to {cmd.arg1}...")
                         # parent_joint(subGroupName, cmd.arg1)
                         scene.joints[subGroupName].parent = cmd.arg1
                     else:
-                        print(f"Attaching {curObjName} to {cmd.arg1}...")
                         # parent_joint(curObjName, cmd.arg1)
                         scene.joints[curObjName].parent = cmd.arg1
                 # TODO: REDO D_JOINT anD D_NET

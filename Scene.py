@@ -21,6 +21,8 @@ from .blender_helpers import (
     weight_mesh_to_joint,
 )
 
+from .Shape import Shape, constructShape
+
 class Scene():
     def __init__(self):
         self.end_frame = 0
@@ -42,6 +44,14 @@ class Scene():
         self.dataGroups.update(newscene.dataGroups)
 
 
-    def build(self):
+    def build(self, face):
+        for shape in self.shapes:
+            s = self.shapes[shape]
+            new_object(shape)
+            constructShape(face, shape, s)
+        for joint in self.joints:
+            j = self.joints[joint]
+            bjoint = new_joint(f"Joint_{j.name}")
+            set_joint_position(j.name, j.position, j.rotation)
         pass
 

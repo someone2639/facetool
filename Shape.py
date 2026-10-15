@@ -10,7 +10,7 @@ class Shape:
         self.faces = faces
         self.mats = mats
 
-def registerMats(obj, mats):
+def registerMats(obj, matID, mats):
     for i, m in enumerate(mats):
         new_mat = bpy.data.materials.new(f"GDMaterial_Group{matID}_{i}")
         new_mat.use_nodes = True
