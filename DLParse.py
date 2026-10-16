@@ -118,31 +118,39 @@ def parseDL(face: Face, name: str, root: bool = False):
 
                 scene.joints[curObjName].rotation = cur_rotation
             case DLCmd.SetAttachOffset:
+                print(f"SetAttachOffset {cmd.vec}")
                 if curObjType == "D_NET":
-                    scene.nets[curObjName].position = position_coord_space_correction(cmd.vec)
-                if scene.joints[curObjName].parent in scene.joints:
-                    parentpos = [
-                        j for j in scene.joints[scene.joints[curObjName].parent].position
-                    ]
-                    parentpos = [a + b for a, b in zip(parentpos, position_coord_space_correction(cmd.vec))]
-                    scene.joints[curObjName].position = parentpos
-                else:
-                    scene.joints[curObjName].position = position_coord_space_correction(cmd.vec)
-                if iAM_MODIFYING_THE_SUBGROUP:
-                    scene.joints[subGroupName].position = position_coord_space_correction(cmd.vec)
-                else:
-                    if cmd.vec == [0, 0, 0] and subGroupName != 0:
-                        scene.joints[curObjName].position = scene.joints[subGroupName].position
+                    print(f"{curObjName} {curObjType}")
+                    if iAM_MODIFYING_THE_SUBGROUP:
+                        scene.nets[subGroupName].position = position_coord_space_correction(cmd.vec)
+                    else:
+                        scene.nets[curObjName].position = position_coord_space_correction(cmd.vec)
+                elif curObjType == "D_JOINT":
+                    if scene.joints[curObjName].parent in scene.joints:
+                        parentpos = [
+                            j for j in scene.joints[scene.joints[curObjName].parent].position
+                        ]
+                        parentpos = [a + b for a, b in zip(parentpos, position_coord_space_correction(cmd.vec))]
+                        scene.joints[curObjName].position = parentpos
                     else:
                         scene.joints[curObjName].position = position_coord_space_correction(cmd.vec)
+                    if iAM_MODIFYING_THE_SUBGROUP:
+                        scene.joints[subGroupName].position = position_coord_space_correction(cmd.vec)
+                    else:
+                        if cmd.vec == [0, 0, 0] and subGroupName != 0:
+                            if subGroupName in scene.joints:
+                                scene.joints[curObjName].position = scene.joints[subGroupName].position
+                            elif subGroupName in scene.nets:
+                                scene.joints[curObjName].position = scene.nets[subGroupName].position
+                        else:
+                            scene.joints[curObjName].position = position_coord_space_correction(cmd.vec)
             case DLCmd.AttachTo:
                 if curObjType != "D_ANIMATOR":
-                    if subGroupName != 0:
-                        # parent_joint(subGroupName, cmd.arg1)
-                        scene.joints[subGroupName].parent = cmd.arg1
-                    else:
-                        # parent_joint(curObjName, cmd.arg1)
-                        scene.joints[curObjName].parent = cmd.arg1
+                    attachToKey = subGroupName if subGroupName != 0 else curObjName
+                    if curObjType == "D_NET":
+                        scene.nets[attachToKey].parent = cmd.arg1
+                    elif curObjType == "D_JOINT":
+                        scene.joints[attachToKey].parent = cmd.arg1
                 # TODO: REDO D_JOINT anD D_NET
             case DLCmd.LinkWith:
                 boneID = cmd.arg1
@@ -151,11 +159,13 @@ def parseDL(face: Face, name: str, root: bool = False):
                 if boneID in scene.joints:
                     scene.joints[boneID].animation = scene.animations[curObjName]
             case DLCmd.MakeNetWithSubGroup:
-                iAM_MODIFYING_THE_SUBGROUP = True
                 subGroupName = cmd.arg1
-                scene.joints[subGroupName] = Joint(subGroupName)
+
+                print(f"MakeNetWithSubGroup {cmd.arg1}")
+                iAM_MODIFYING_THE_SUBGROUP = True
+                scene.nets[subGroupName] = Net(subGroupName)
                 # scene.joints[subGroupName].bone = new_joint(f"Joint_{subGroupName}", True)
-                # curObjType = "D_JOINT"
+                curObjType = "D_NET"
             case DLCmd.EndNetWithSubGroup:
                 subGroupName = 0
                 curSkinShape = 0
