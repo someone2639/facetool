@@ -45,13 +45,12 @@ class Scene():
 
 
     def build(self, face):
-        for shape in self.shapes:
-            s = self.shapes[shape]
-            new_object(shape)
-            constructShape(face, s, s.materials, self.materials[s.materials])
         for joint in self.joints:
             j = self.joints[joint]
             bjoint = new_joint(f"Joint_{j.name}")
             set_joint_position(j.name, j.position, j.rotation)
-        pass
+        for shape in self.shapes:
+            s = self.shapes[shape]
+            new_object(shape)
+            constructShape(face, s, s.materials, self.materials[s.materials])
 

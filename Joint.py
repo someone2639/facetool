@@ -19,4 +19,5 @@ class Joint:
         self.bone = None
         self.vtxGroup = None
         self.animation = None
+        self.weights = {}
 

@@ -106,6 +106,12 @@ def clear_object_weights(obj):
             g.weight = 0.0
     objectmode()
 
+def set_object_weights(obj, weight_info: dict[int, float]):
+    # Add this weight to the vertex group
+    # group = scene.vtxGroups[curSkinShape]
+    # group.add([int(cmd.arg2)], cmd.vec[0] / 100.0, "REPLACE")
+    pass
+
 def set_object_joint(obj, joint_name: str):
     mod = obj.modifiers.new("Armature_Root", "ARMATURE")
     mod.object = get_root_animator()

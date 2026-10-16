@@ -41,6 +41,9 @@ def get_world_pos() -> list[float]:
     global current_object_pos
     return current_object_pos
 
+def add_vecs(a, b) -> list:
+    return [x + y for x, y in zip(a, b)]
+
 def parseDL(face: Face, name: str, root: bool = False):
     curObjType = 0
     curObjName = "0"
@@ -118,24 +121,21 @@ def parseDL(face: Face, name: str, root: bool = False):
 
                 scene.joints[curObjName].rotation = cur_rotation
             case DLCmd.SetAttachOffset:
-                print(f"SetAttachOffset {cmd.vec}")
+                posvec = position_coord_space_correction(cmd.vec)
                 if curObjType == "D_NET":
-                    print(f"{curObjName} {curObjType}")
                     if iAM_MODIFYING_THE_SUBGROUP:
-                        scene.nets[subGroupName].position = position_coord_space_correction(cmd.vec)
+                        scene.nets[subGroupName].position = posvec
                     else:
-                        scene.nets[curObjName].position = position_coord_space_correction(cmd.vec)
+                        scene.nets[curObjName].position = posvec
                 elif curObjType == "D_JOINT":
                     if scene.joints[curObjName].parent in scene.joints:
-                        parentpos = [
-                            j for j in scene.joints[scene.joints[curObjName].parent].position
-                        ]
-                        parentpos = [a + b for a, b in zip(parentpos, position_coord_space_correction(cmd.vec))]
+                        parentpos = scene.joints[scene.joints[curObjName].parent].position
+                        parentpos = [a + b for a, b in zip(parentpos, posvec)]
                         scene.joints[curObjName].position = parentpos
                     else:
-                        scene.joints[curObjName].position = position_coord_space_correction(cmd.vec)
+                        scene.joints[curObjName].position = posvec
                     if iAM_MODIFYING_THE_SUBGROUP:
-                        scene.joints[subGroupName].position = position_coord_space_correction(cmd.vec)
+                        scene.joints[subGroupName].position = posvec
                     else:
                         if cmd.vec == [0, 0, 0] and subGroupName != 0:
                             if subGroupName in scene.joints:
@@ -143,7 +143,7 @@ def parseDL(face: Face, name: str, root: bool = False):
                             elif subGroupName in scene.nets:
                                 scene.joints[curObjName].position = scene.nets[subGroupName].position
                         else:
-                            scene.joints[curObjName].position = position_coord_space_correction(cmd.vec)
+                            scene.joints[curObjName].position = posvec
             case DLCmd.AttachTo:
                 if curObjType != "D_ANIMATOR":
                     attachToKey = subGroupName if subGroupName != 0 else curObjName
@@ -160,12 +160,10 @@ def parseDL(face: Face, name: str, root: bool = False):
                     scene.joints[boneID].animation = scene.animations[curObjName]
             case DLCmd.MakeNetWithSubGroup:
                 subGroupName = cmd.arg1
-
-                print(f"MakeNetWithSubGroup {cmd.arg1}")
-                iAM_MODIFYING_THE_SUBGROUP = True
-                scene.nets[subGroupName] = Net(subGroupName)
-                # scene.joints[subGroupName].bone = new_joint(f"Joint_{subGroupName}", True)
                 curObjType = "D_NET"
+                iAM_MODIFYING_THE_SUBGROUP = True
+
+                scene.nets[subGroupName] = Net(subGroupName)
             case DLCmd.EndNetWithSubGroup:
                 subGroupName = 0
                 curSkinShape = 0
@@ -174,33 +172,21 @@ def parseDL(face: Face, name: str, root: bool = False):
                     # Only 1 joint can be in a subgroup at a time?
                     iAM_MODIFYING_THE_SUBGROUP = False
 
+                # if curObjType == "D_NET":
+                #     scene.nets[curObjName].joint = cmd.arg1
+
+                parentName = subGroupName
+                if curObjType == "D_JOINT":
+                    parentName = curObjName
+
                 curObjType = "D_JOINT"
                 curObjName = cmd.arg1
                 scene.joints[curObjName] = Joint(curObjName)
                 scene.joints[curObjName].name = curObjName
-                # override the vtx group
-                # scene.vtxGroups[curSkinShape] = scene.objects[curSkinShape].vertex_groups.new(
-                #     name=f"Joint_{curObjName}"
-                # )
-                # clear_object_weights(scene.objects[curSkinShape])
-                # scene.joints[curObjName].bone = new_joint(f"Joint_{curObjName}", False)
-                # parent_joint(curObjName, subGroupName)
-                scene.joints[curObjName].parent = subGroupName
+                scene.joints[curObjName].parent = parentName
             case DLCmd.SetShapePtr:
-                # if cmd.arg1 in scene.shapes:
-                    # constructShape(face, cmd.arg1, scene.shapes[cmd.arg1])
-                    # o = bpy.data.objects[f"Shape_{cmd.arg1}"]
-                    # mesh = bpy.data.meshes[f"Shape_{cmd.arg1}_mesh"]
-                    # rootgroup = scene.objects[cmd.arg1].vertex_groups.new(
-                    #     name=f"Joint_{ROOT_ANIMATOR_NAME}"
-                    # )
-                    # all_indices = [v.index for v in mesh.vertices]
-                    # rootgroup.add(all_indices, 0.5, "REPLACE")
-                    # mod = o.modifiers.new("Armature_Root", "ARMATURE")
-                    # mod.object = bpy.data.objects[ROOT_ANIMATOR_NAME]
-                    # mod.vertex_group = f"Joint_{ROOT_ANIMATOR_NAME}"
                 if curObjType == "D_NET":
-                    scene.nets[curObjName].shape = f"Shape_{cmd.arg1}"
+                    scene.nets[curObjName].shape = cmd.arg1
             case DLCmd.SetSkinShape:
                 curSkinShape = cmd.arg1
                 # o = bpy.data.objects[f"Shape_{curSkinShape}"]
@@ -215,10 +201,7 @@ def parseDL(face: Face, name: str, root: bool = False):
                 # mod.vertex_group = f"Joint_{curObjName}"
                 # objectmode()
             case DLCmd.SetSkinWeight:
-                pass
-                # Add this weight to the vertex group
-                # group = scene.vtxGroups[curSkinShape]
-                # group.add([int(cmd.arg2)], cmd.vec[0] / 100.0, "REPLACE")
+                scene.joints[curObjName].weights[int(cmd.arg2)] = cmd.vec[0] / 100.0
             case DLCmd.StartGroup:
                 if cmd.arg1 != DYNOBJ_MARIO_MAIN_SHAPES_GROUP and cmd.arg1 != 1:
                     curMatGroup = cmd.arg1
