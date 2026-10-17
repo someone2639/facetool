@@ -64,12 +64,15 @@ def set_joint_position(boneName, position, rotation_deg):
     objectmode()
 
 def parent_joint(name: str, parent_name: str):
-    armature = bpy.data.objects.get(ROOT_ANIMATOR_NAME)
+    armature = get_root_animator()
     editmode(armature)
     bone = armature.data.edit_bones.get(f"Joint_{name}")
     pbone = armature.data.edit_bones.get(f"Joint_{parent_name}")
+    rbone = armature.data.edit_bones.get(f"Joint_{DYNOBJ_MARIO_MAIN_NET}")
     if pbone:
         bone.parent = pbone
+    else:
+        bone.parent = rbone
     objectmode()
 
 def new_object(name: str):
@@ -105,10 +108,11 @@ def clear_object_weights(obj):
             g.weight = 0.0
     objectmode()
 
-def set_object_weights(obj, weight_info: dict[int, float]):
+def set_object_weights(obj, net_name: str, weight_info: dict[int, float]):
     # Add this weight to the vertex group
-    group = scene.vtxGroups[curSkinShape]
-    group.add([int(cmd.arg2)], cmd.vec[0] / 100.0, "REPLACE")
+    group = obj.vertex_groups[net_name]
+    for index in weight_info:
+        group.add([index], weight_info[index], "REPLACE")
 
 def set_object_joint(obj, joint_name: str):
     mod = obj.modifiers.new("Armature_Root", "ARMATURE")

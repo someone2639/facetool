@@ -135,7 +135,7 @@ def parseDL(face: Face, name: str, root: bool = False):
                     else:
                         scene.joints[curObjName].position = posvec
                     if iAM_MODIFYING_THE_SUBGROUP:
-                        scene.joints[subGroupName].position = posvec
+                        scene.nets[subGroupName].position = posvec
                     else:
                         if cmd.vec == [0, 0, 0] and subGroupName != 0:
                             if subGroupName in scene.joints:
@@ -167,6 +167,7 @@ def parseDL(face: Face, name: str, root: bool = False):
             case DLCmd.EndNetWithSubGroup:
                 subGroupName = 0
                 curSkinShape = 0
+                iAM_MODIFYING_THE_SUBGROUP = False
             case DLCmd.MakeAttachedJoint:
                 if curObjType == "D_NET":
                     if iAM_MODIFYING_THE_SUBGROUP:
@@ -177,7 +178,7 @@ def parseDL(face: Face, name: str, root: bool = False):
                             scene.nets[curObjName].joint = cmd.arg1
 
                 if iAM_MODIFYING_THE_SUBGROUP:
-                    # Only 1 joint can be in a subgroup at a time?
+                    # edit commands will now apply to the joints themselves
                     iAM_MODIFYING_THE_SUBGROUP = False
 
                 parentName = subGroupName

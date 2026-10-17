@@ -1,4 +1,5 @@
 import bpy
+from .constants import DYNOBJ_MARIO_MAIN_NET, ROOT_ANIMATOR_NAME, DYNOBJ_MARIO_MAIN_SHAPES_GROUP
 
 from .blender_helpers import (
     editmode,
@@ -15,6 +16,7 @@ from .blender_helpers import (
     set_object_position,
     set_object_parent,
     set_object_joint,
+    set_object_weights,
     clear_object_weights,
     make_object_vertex_group,
     # position_object_at_joint,
@@ -53,18 +55,29 @@ class Scene():
             obj, mesh = new_object(shape)
             constructShape(face, s, s.materials, self.materials[s.materials])
 
+        for joint in self.joints:
+            j = self.joints[joint]
+            bjoint = new_joint(f"Joint_{j.name}")
+            set_joint_position(j.name, j.position, j.rotation)
+
+            if j.animation in face.animinfos:
+                parseAnimation(face, [0, 0, 0], joint, j.animation)
+        for joint in self.joints:
+            j = self.joints[joint]
+            if j.parent != 0:
+                parent_joint(j.name, j.parent)
+
         for net in self.nets:
             if self.nets[net].shape != 0:
                 obj = bpy.data.objects[f"Shape_{self.nets[net].shape}"]
                 mesh = obj.data
                 if self.nets[net].joint:
+                    print(f"WEIGHTING {self.nets[net].shape} TO {self.nets[net].joint}")
+                    joint = self.joints[self.nets[net].joint]
                     weight_mesh_to_joint(obj, mesh, f"Joint_{self.nets[net].joint}")
-
-        for joint in self.joints:
-            j = self.joints[joint]
-            bjoint = new_joint(f"Joint_{j.name}")
-            set_joint_position(j.name, j.position, j.rotation)
-            if j.animation in face.animinfos:
-                print(f"animparse {joint} {j.animation}")
-                parseAnimation(face, [0, 0, 0], joint, j.animation)
+                    set_object_weights(obj, f"Joint_{self.nets[net].joint}", joint.weights)
+                    if self.nets[net].shape != 0:
+                        mod = obj.modifiers.new(f"Armature_{self.nets[net].shape}", "ARMATURE")
+                        mod.object = get_root_animator()
+                        mod.vertex_group = f"Joint_{self.nets[net].joint}"
 
