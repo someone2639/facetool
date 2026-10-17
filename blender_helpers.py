@@ -78,7 +78,7 @@ def new_object(name: str):
     scene = bpy.context.scene
     scene.collection.objects.link(obj)
     bpy.context.view_layer.objects.active = obj
-    return obj
+    return obj, mesh
 
 def set_object_position(obj, pos: list[float]):
     obj.location[0] = pos[0]
@@ -91,8 +91,7 @@ def set_object_parent(obj, parent_name: str):
 def make_object_vertex_group(obj, name: str):
     return obj.vertex_groups.new(name=name)
 
-def weight_mesh_to_joint(obj, mesh_name: str, joint_name: str):
-    mesh = bpy.data.meshes[mesh_name]
+def weight_mesh_to_joint(obj, mesh, joint_name: str):
     all_indices = [v.index for v in mesh.vertices]
 
     rootgroup = make_object_vertex_group(obj, joint_name)
@@ -108,9 +107,8 @@ def clear_object_weights(obj):
 
 def set_object_weights(obj, weight_info: dict[int, float]):
     # Add this weight to the vertex group
-    # group = scene.vtxGroups[curSkinShape]
-    # group.add([int(cmd.arg2)], cmd.vec[0] / 100.0, "REPLACE")
-    pass
+    group = scene.vtxGroups[curSkinShape]
+    group.add([int(cmd.arg2)], cmd.vec[0] / 100.0, "REPLACE")
 
 def set_object_joint(obj, joint_name: str):
     mod = obj.modifiers.new("Armature_Root", "ARMATURE")

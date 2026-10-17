@@ -154,8 +154,8 @@ def parseDL(face: Face, name: str, root: bool = False):
                 # TODO: REDO D_JOINT anD D_NET
             case DLCmd.LinkWith:
                 boneID = cmd.arg1
-                if boneID == DYNOBJ_MARIO_MAIN_NET:
-                    boneID = ROOT_ANIMATOR_NAME
+                # if boneID == DYNOBJ_MARIO_MAIN_NET:
+                #     boneID = ROOT_ANIMATOR_NAME
                 if boneID in scene.joints:
                     scene.joints[boneID].animation = scene.animations[curObjName]
             case DLCmd.MakeNetWithSubGroup:
@@ -168,12 +168,17 @@ def parseDL(face: Face, name: str, root: bool = False):
                 subGroupName = 0
                 curSkinShape = 0
             case DLCmd.MakeAttachedJoint:
+                if curObjType == "D_NET":
+                    if iAM_MODIFYING_THE_SUBGROUP:
+                        if subGroupName in scene.nets:
+                            scene.nets[subGroupName].joint = cmd.arg1
+                    else:
+                        if curObjName in scene.nets:
+                            scene.nets[curObjName].joint = cmd.arg1
+
                 if iAM_MODIFYING_THE_SUBGROUP:
                     # Only 1 joint can be in a subgroup at a time?
                     iAM_MODIFYING_THE_SUBGROUP = False
-
-                # if curObjType == "D_NET":
-                #     scene.nets[curObjName].joint = cmd.arg1
 
                 parentName = subGroupName
                 if curObjType == "D_JOINT":
@@ -189,6 +194,13 @@ def parseDL(face: Face, name: str, root: bool = False):
                     scene.nets[curObjName].shape = cmd.arg1
             case DLCmd.SetSkinShape:
                 curSkinShape = cmd.arg1
+
+                if iAM_MODIFYING_THE_SUBGROUP:
+                    if subGroupName in scene.nets:
+                        scene.nets[subGroupName].shape = curSkinShape
+                else:
+                    if curObjName in scene.nets:
+                        scene.nets[curObjName].shape = curSkinShape
                 # o = bpy.data.objects[f"Shape_{curSkinShape}"]
 
                 # mod = o.modifiers.new(f"Armature_{curSkinShape}", "ARMATURE")

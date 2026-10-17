@@ -1,3 +1,4 @@
+import bpy
 
 from .blender_helpers import (
     editmode,
@@ -20,6 +21,8 @@ from .blender_helpers import (
     # get_current_object_position,
     weight_mesh_to_joint,
 )
+
+from .Animation import parseAnimation
 
 from .Shape import Shape, constructShape
 
@@ -45,12 +48,23 @@ class Scene():
 
 
     def build(self, face):
+        for shape in self.shapes:
+            s = self.shapes[shape]
+            obj, mesh = new_object(shape)
+            constructShape(face, s, s.materials, self.materials[s.materials])
+
+        for net in self.nets:
+            if self.nets[net].shape != 0:
+                obj = bpy.data.objects[f"Shape_{self.nets[net].shape}"]
+                mesh = obj.data
+                if self.nets[net].joint:
+                    weight_mesh_to_joint(obj, mesh, f"Joint_{self.nets[net].joint}")
+
         for joint in self.joints:
             j = self.joints[joint]
             bjoint = new_joint(f"Joint_{j.name}")
             set_joint_position(j.name, j.position, j.rotation)
-        for shape in self.shapes:
-            s = self.shapes[shape]
-            new_object(shape)
-            constructShape(face, s, s.materials, self.materials[s.materials])
+            if j.animation in face.animinfos:
+                print(f"animparse {joint} {j.animation}")
+                parseAnimation(face, [0, 0, 0], joint, j.animation)
 
