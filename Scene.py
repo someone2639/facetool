@@ -66,7 +66,7 @@ class Scene():
             set_joint_position(j.name, j.position, [0, 0, 0])
 
             if j.animation in face.animinfos:
-                parseAnimation(face, [0, 0, 0], joint, j.animation)
+                parseAnimation(face, j.rotation, joint, j.animation)
         for joint in self.joints:
             j = self.joints[joint]
             if j.parent != 0:
