@@ -214,17 +214,6 @@ def parseDL(face: Face, name: str, root: bool = False):
                 else:
                     if curObjName in scene.nets:
                         scene.nets[curObjName].shape = curSkinShape
-                # o = bpy.data.objects[f"Shape_{curSkinShape}"]
-
-                # mod = o.modifiers.new(f"Armature_{curSkinShape}", "ARMATURE")
-                # mod.object = get_root_animator()
-
-                # scene.vtxGroups[curSkinShape] = scene.objects[curSkinShape].vertex_groups.new(
-                #     name=f"Joint_{subGroupName}"
-                # )
-                # clear_object_weights(scene.objects[curSkinShape])
-                # mod.vertex_group = f"Joint_{curObjName}"
-                # objectmode()
             case DLCmd.SetSkinWeight:
                 scene.joints[curObjName].weights[int(cmd.arg2)] = cmd.vec[0] / 100.0
             case DLCmd.StartGroup:
