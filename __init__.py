@@ -93,6 +93,7 @@ class ImportFaceButton(Operator):
             goddard_data["scene"] = parseDL(goddard_data["face"], face_name, root = True)
             goddard_data["scene"].build(goddard_data["face"])
             bpy.context.scene.frame_end = goddard_data["scene"].end_frame
+            delete_unused_bones()
             return {"FINISHED"}
         else:
             self.report({"ERROR"}, "No import file specified!")

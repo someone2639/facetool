@@ -94,11 +94,11 @@ def set_object_parent(obj, parent_name: str):
 def make_object_vertex_group(obj, name: str):
     return obj.vertex_groups.new(name=name)
 
-def weight_mesh_to_joint(obj, mesh, joint_name: str):
+def weight_mesh_to_joint(obj, mesh, joint_name: str, default_weight: float = 0.0):
     all_indices = [v.index for v in mesh.vertices]
 
     rootgroup = make_object_vertex_group(obj, joint_name)
-    rootgroup.add(all_indices, 1.0, "REPLACE")
+    rootgroup.add(all_indices, default_weight, "REPLACE")
 
 def clear_object_weights(obj):
     mesh = obj.data

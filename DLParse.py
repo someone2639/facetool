@@ -118,8 +118,20 @@ def parseDL(face: Face, name: str, root: bool = False):
                 pass
             case DLCmd.SetRotation:
                 cur_rotation = rotation_coord_space_correction(cmd.vec)
+                parent_rotation = [0, 0, 0]
 
-                scene.joints[curObjName].rotation = cur_rotation
+                if curObjName in scene.nets:
+                    scene.nets[curObjName].rotation = cur_rotation
+                else:
+                    if scene.joints[curObjName].parent != 0:
+                        if scene.joints[curObjName].parent in scene.nets:
+                            parent_rotation = scene.nets[scene.joints[curObjName].parent].rotation
+                        else:
+                            parent_rotation = scene.joints[scene.joints[curObjName].parent].rotation
+
+                    # scene.joints[curObjName].rotation = add_vecs(cur_rotation, parent_rotation)
+                    scene.joints[curObjName].rotation = cur_rotation
+
             case DLCmd.SetAttachOffset:
                 posvec = position_coord_space_correction(cmd.vec)
                 if curObjType == "D_NET":

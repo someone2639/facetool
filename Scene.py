@@ -54,11 +54,16 @@ class Scene():
             s = self.shapes[shape]
             obj, mesh = new_object(shape)
             constructShape(face, s, s.materials, self.materials[s.materials])
+            weight_mesh_to_joint(obj, mesh, f"Joint_{DYNOBJ_MARIO_MAIN_NET}", default_weight = 1.0)
+            mod = obj.modifiers.new(f"Armature_{DYNOBJ_MARIO_MAIN_NET}", "ARMATURE")
+            mod.object = get_root_animator()
+            mod.vertex_group = f"Joint_{DYNOBJ_MARIO_MAIN_NET}"
 
         for joint in self.joints:
             j = self.joints[joint]
             bjoint = new_joint(f"Joint_{j.name}")
-            set_joint_position(j.name, j.position, j.rotation)
+            # set_joint_position(j.name, j.position, j.rotation)
+            set_joint_position(j.name, j.position, [0, 0, 0])
 
             if j.animation in face.animinfos:
                 parseAnimation(face, [0, 0, 0], joint, j.animation)

@@ -141,6 +141,7 @@ def LinkAnimation(baserot, boneID, action, rotation, position):
 #  u32 dataType (use the lookup struct)
 #  u32 address
 def parseAnimation(face, baseRot, jointID, animInfoName):
+    print(f"parse_animation {jointID}")
     for i, a in enumerate(face.animinfos[animInfoName]):
         (_, a_type, anim_name) = a
         if a_type == "GD_ANIM_EMPTY":

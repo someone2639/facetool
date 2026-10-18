@@ -8,4 +8,5 @@ class Net:
         self.type = 0
         self.shape = 0
         self.position = [0, 0, 0]
+        self.rotation = [0, 0, 0]
         self.joint = None
