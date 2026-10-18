@@ -10,3 +10,4 @@ class Net:
         self.position = [0, 0, 0]
         self.rotation = [0, 0, 0]
         self.joint = None
+        self.default_vertex_weight = 0.0

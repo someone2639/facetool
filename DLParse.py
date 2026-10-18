@@ -44,6 +44,9 @@ def get_world_pos() -> list[float]:
 def add_vecs(a, b) -> list:
     return [x + y for x, y in zip(a, b)]
 
+def subtract_vecs(a, b) -> list:
+    return [x - y for x, y in zip(a, b)]
+
 def parseDL(face: Face, name: str, root: bool = False):
     curObjType = 0
     curObjName = "0"
@@ -157,13 +160,24 @@ def parseDL(face: Face, name: str, root: bool = False):
                         else:
                             scene.joints[curObjName].position = posvec
             case DLCmd.AttachTo:
+                flag = int(cmd.arg2, 16)
+                attachTarget = cmd.arg1
+
                 if curObjType != "D_ANIMATOR":
                     attachToKey = subGroupName if subGroupName != 0 else curObjName
                     if curObjType == "D_NET":
-                        scene.nets[attachToKey].parent = cmd.arg1
+                        scene.nets[attachToKey].parent = attachTarget
                     elif curObjType == "D_JOINT":
-                        scene.joints[attachToKey].parent = cmd.arg1
+                        scene.joints[attachToKey].parent = attachTarget
                 # TODO: REDO D_JOINT anD D_NET
+                if curObjName in scene.nets and not iAM_MODIFYING_THE_SUBGROUP:
+                    if scene.nets[curObjName].type == 3:
+                        print(f"{curObjName} attachto {flag:02X} {attachTarget}")
+                        if flag & 0x9:
+                            scene.nets[curObjName].joint = attachTarget
+                            scene.nets[curObjName].default_vertex_weight = 1.0
+                            scene.shapes[scene.nets[curObjName].shape].position = scene.joints[attachTarget].position
+                            scene.nets[curObjName].rotation = scene.joints[attachTarget].rotation
             case DLCmd.LinkWith:
                 boneID = cmd.arg1
                 # if boneID == DYNOBJ_MARIO_MAIN_NET:

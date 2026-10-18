@@ -79,7 +79,7 @@ class Scene():
                 if self.nets[net].joint:
                     print(f"WEIGHTING {self.nets[net].shape} TO {self.nets[net].joint}")
                     joint = self.joints[self.nets[net].joint]
-                    weight_mesh_to_joint(obj, mesh, f"Joint_{self.nets[net].joint}")
+                    weight_mesh_to_joint(obj, mesh, f"Joint_{self.nets[net].joint}", default_weight = self.nets[net].default_vertex_weight)
                     set_object_weights(obj, f"Joint_{self.nets[net].joint}", joint.weights)
                     if self.nets[net].shape != 0:
                         mod = obj.modifiers.new(f"Armature_{self.nets[net].shape}", "ARMATURE")
