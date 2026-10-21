@@ -93,6 +93,8 @@ class ImportFaceButton(Operator):
             goddard_data["scene"] = parseDL(goddard_data["face"], face_name, root = True)
             goddard_data["scene"].build(goddard_data["face"])
             bpy.context.scene.frame_end = goddard_data["scene"].end_frame
+            bpy.context.scene.render.fps = 30
+            bpy.context.scene.render.fps_base = 1.0
             delete_unused_bones()
             return {"FINISHED"}
         else:
